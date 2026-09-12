@@ -13,5 +13,13 @@ assets:
 preview:
 	PYTHONDONTWRITEBYTECODE=1 uv run --with pillow --with segno python sim/preview.py
 
+deploy: test
+	test -f device/assets/contact.json
+	find device -name __pycache__ -type d -exec rm -rf {} +
+	$(MP) run tools/wipe.py
+	cd device && $(MP) fs cp -r . :
+	$(MP) fs ls :
+	$(MP) reset
+
 font:
 	uv run python tools/build_font.py
