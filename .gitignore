@@ -2,3 +2,4 @@ device/assets/contact.json
 __pycache__/
 .pytest_cache/
 sim/out/
+tools/.cache/
