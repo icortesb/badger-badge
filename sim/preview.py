@@ -39,6 +39,22 @@ def main():
     for p in projects.PROJECTS:
         shot("project-" + p["name"], lambda d, j, p=p: projects_screen.render(d, p, False))
 
+    import random
+
+    import quiz_engine
+    import quiz_screen
+
+    round_ = quiz_engine.build_round(state.load("assets/quiz.json", []), random.Random(7))
+    logo = next(q for q in round_ if q["type"] == "logo")
+    trivia = next(q for q in round_ if q["type"] == "trivia")
+    shot("quiz-logo", lambda d, j: quiz_screen.draw_question(d, j, logo, 1, 10, 0))
+    shot("quiz-trivia", lambda d, j: quiz_screen.draw_question(d, j, trivia, 2, 10, 1))
+    shot("quiz-wrong", lambda d, j: quiz_screen.draw_feedback(d, trivia, (trivia["answer"] + 1) % 3, 2, 10, 1))
+    shot("quiz-result", lambda d, j: quiz_screen.draw_result(d, 7, 10))
+    shot("quiz-initials", lambda d, j: quiz_screen.draw_initials(d, [8, 21, 0], 1))
+    board = [{"i": "IVA", "s": 9}, {"i": "BOB", "s": 7}, {"i": "ANA", "s": 7}, {"i": "ZED", "s": 4}, {"i": "LOL", "s": 1}]
+    shot("quiz-board", lambda d, j: quiz_screen.draw_board(d, board, 1))
+
 
 if __name__ == "__main__":
     main()
