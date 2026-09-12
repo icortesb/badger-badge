@@ -6,3 +6,6 @@ MP = mpremote connect $(PORT)
 
 test:
 	PYTHONDONTWRITEBYTECODE=1 uv run --with pytest --with pillow pytest -q
+
+assets:
+	uv run --with pillow python tools/build_assets.py --photo $(PHOTO)
