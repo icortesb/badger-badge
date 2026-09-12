@@ -32,8 +32,4 @@ def save(path, data):
     tmp = path + ".tmp"
     with open(tmp, "w") as f:
         json.dump(data, f)
-    try:
-        os.remove(path)
-    except OSError:
-        pass
     os.rename(tmp, path)

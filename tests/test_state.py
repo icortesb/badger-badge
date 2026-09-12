@@ -45,3 +45,10 @@ def test_save_overwrites_existing(tmp_path):
     state.save(path, {"tab": "links", "combo": 0})
     state.save(path, {"tab": "badge", "combo": 1})
     assert state.load(path, DEFAULTS) == {"tab": "badge", "combo": 1}
+
+
+def test_save_leaves_no_tmp_file_after_overwrite(tmp_path):
+    path = str(tmp_path / "app.json")
+    state.save(path, {"tab": "links", "combo": 0})
+    state.save(path, {"tab": "badge", "combo": 1})
+    assert not (tmp_path / "app.json.tmp").exists()
