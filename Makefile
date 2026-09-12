@@ -9,3 +9,6 @@ test:
 
 assets:
 	uv run --with pillow python tools/build_assets.py --photo $(PHOTO)
+
+preview:
+	PYTHONDONTWRITEBYTECODE=1 uv run --with pillow --with segno python sim/preview.py
