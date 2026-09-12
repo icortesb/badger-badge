@@ -1,7 +1,15 @@
 import links
 import projects
+import state
 
 CONTACT = {"first": "Ivan", "last": "Cortes", "email": "dishape.dev@gmail.com", "phone": "+5491100000000"}
+
+
+def test_contact_defaults_roundtrip_through_state(tmp_path):
+    path = str(tmp_path / "contact.json")
+    state.save(path, CONTACT)
+    loaded = state.load(path, links.CONTACT_DEFAULTS)
+    assert links.items(loaded)[-1]["label"] == "Contacto"
 
 
 def test_items_without_contact():

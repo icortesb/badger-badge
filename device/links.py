@@ -1,3 +1,5 @@
+CONTACT_DEFAULTS = {"first": "", "last": "", "email": "", "phone": ""}
+
 BASE = (
     ("GitHub", "github.com/icortesb", "https://github.com/icortesb"),
     ("LinkedIn", "in/ivan-cortes-buenard", "https://www.linkedin.com/in/ivan-cortes-buenard/"),

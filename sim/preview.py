@@ -30,8 +30,7 @@ def main():
     import state
 
     shot("badge", badge_screen.render)
-    contact_defaults = {"first": "", "last": "", "email": "", "phone": ""}
-    items = links.items(state.load("assets/contact.json", contact_defaults))
+    items = links.items(state.load("assets/contact.json", links.CONTACT_DEFAULTS))
     for i, item in enumerate(items):
         shot("links-{}".format(i), lambda d, j, i=i: links_screen.render(d, items, i))
         module = links_screen.draw_qr(badger2040.Badger2040(), item["payload"], 0, 0, links_screen.QR_BOX)
