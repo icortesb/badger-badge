@@ -18,6 +18,8 @@ import ui
 
 APP_PATH = "data/app.json"
 CONTACT_PATH = "assets/contact.json"
+BLINK_MS = 600
+BATTERY_AWAKE_MS = 10000
 
 woken = badger2040.woken_by_button()
 d = badger2040.Badger2040()
@@ -36,13 +38,47 @@ policy = screen.Policy()
 if woken:
     buttons.add_wake_buttons(queue)
 
+vbus_pin = machine.Pin(24, machine.Pin.IN)
+
+
+def on_usb():
+    return vbus_pin.value() == 1
+
+
+def current_project():
+    return projects.PROJECTS[app["project"] % len(projects.PROJECTS)]
+
+
+def draw_cursor(visible):
+    if app["tab"] == "badge":
+        return badge_screen.cursor(d, visible)
+    if app["tab"] == "projects":
+        return projects_screen.cursor(d, current_project(), visible)
+    return None
+
+
+def type_project(kind):
+    project = current_project()
+    total = len(project["lines"])
+    projects_screen.draw(d, project, lines=1, qr=False)
+    screen.show(d, policy, kind, screen.CONTENT)
+    for i in range(1, total):
+        if queue.pending():
+            projects_screen.draw(d, project)
+            screen.show(d, policy, "content", screen.CONTENT)
+            return
+        projects_screen.draw_line(d, project, i)
+        screen.show(d, policy, "detail", projects_screen.line_region(i))
+    projects_screen.draw_qr(d, project)
+    screen.show(d, policy, "detail", projects_screen.QR_REGION)
+
 
 def render(kind):
+    if app["tab"] == "projects":
+        type_project(kind)
+        return
     if app["tab"] == "links":
         links_screen.draw(d, link_items, app["link"])
-    elif app["tab"] == "projects":
-        project = projects.PROJECTS[app["project"] % len(projects.PROJECTS)]
-        projects_screen.draw(d, project)
     else:
         badge_screen.draw(d, jpeg)
     screen.show(d, policy, kind, screen.CONTENT)
@@ -56,6 +92,10 @@ def wait_release():
 
 def main():
     global app
+    cursor_on = True
+    now = time.ticks_ms()
+    awake_until = time.ticks_add(now, BATTERY_AWAKE_MS)
+    next_blink = time.ticks_add(now, BLINK_MS)
     if not woken:
         app["tab"] = "badge"
         app["combo"] = 0
@@ -63,30 +103,53 @@ def main():
         render("tab")
     while True:
         d.keepalive()
-        name = queue.pop(time.ticks_ms())
-        if name is None or name == "exit":
-            if not queue.pending():
-                d.halt()
+        now = time.ticks_ms()
+        name = queue.pop(now)
+        if name is not None and name != "exit":
+            before = (app["tab"], app["link"], app["project"])
+            before_app = dict(app)
+            app, action = nav.handle(app, name, len(link_items), len(projects.PROJECTS))
+            if action == "quiz":
+                # Import diferido: el quiz no se carga en cada wake a batería.
+                import random
+                import quiz_screen
+                quiz_screen.run(d, jpeg, random, queue)
+                app["tab"] = "badge"
+                state.save(APP_PATH, app)
+                render("tab")
+            else:
+                if app != before_app:
+                    state.save(APP_PATH, app)
+                if app["tab"] != before[0]:
+                    render("tab")
+                elif (app["link"], app["project"]) != before[1:]:
+                    render("content")
+            cursor_on = True
+            now = time.ticks_ms()
+            awake_until = time.ticks_add(now, BATTERY_AWAKE_MS)
+            next_blink = time.ticks_add(now, BLINK_MS)
+            continue
+        if queue.pending():
             time.sleep_ms(10)
             continue
-        before = (app["tab"], app["link"], app["project"])
-        before_app = dict(app)
-        app, action = nav.handle(app, name, len(link_items), len(projects.PROJECTS))
-        if action == "quiz":
-            # Import diferido: el quiz no se carga en cada wake a batería.
-            import random
-            import quiz_screen
-            quiz_screen.run(d, jpeg, random, queue)
-            app["tab"] = "badge"
-            state.save(APP_PATH, app)
-            render("tab")
-        else:
-            if app != before_app:
-                state.save(APP_PATH, app)
-            if app["tab"] != before[0]:
-                render("tab")
-            elif (app["link"], app["project"]) != before[1:]:
-                render("content")
+        usb = on_usb()
+        awake = usb or time.ticks_diff(awake_until, now) > 0
+        if awake and time.ticks_diff(now, next_blink) >= 0:
+            region = draw_cursor(not cursor_on)
+            if region is not None:
+                cursor_on = not cursor_on
+                screen.show(d, policy, "detail", region)
+            next_blink = time.ticks_add(time.ticks_ms(), BLINK_MS)
+        if not awake:
+            if not cursor_on:
+                region = draw_cursor(True)
+                if region is not None:
+                    screen.show(d, policy, "detail", region)
+                cursor_on = True
+            d.halt()
+            # Si seguimos vivos (USB conectado o botón apretado), seguir atendiendo.
+            awake_until = time.ticks_add(time.ticks_ms(), BATTERY_AWAKE_MS)
+        time.sleep_ms(10)
 
 
 def error_screen(exc):
