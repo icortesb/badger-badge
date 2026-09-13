@@ -5,7 +5,9 @@ QR_REGION = (182, 14, 112, 112)
 
 
 def line_region(i):
-    return (4, 16 + i * LINE_H, 176, LINE_H)
+    # 168, no 176: alineado a bloques de 8px (screen.align) queda pegado al borde
+    # izquierdo del QR sin invadir su mismo bloque en un refresco parcial.
+    return (4, 16 + i * LINE_H, 168, LINE_H)
 
 
 def _is_cursor_line(project, i):

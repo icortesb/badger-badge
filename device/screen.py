@@ -33,7 +33,8 @@ class Policy:
                 return FULL, FAST, None
             return PARTIAL, TURBO, align(*region)
         if kind == "detail":
-            self.partials += 1
+            # Los detalles (cursor, líneas tipeadas, QR) no cuentan para el cleanup
+            # periódico: son parches chicos, no el motivo de que el e-ink se ensucie.
             return PARTIAL, TURBO, align(*region)
         raise ValueError(kind)
 

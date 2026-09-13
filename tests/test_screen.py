@@ -38,12 +38,13 @@ def test_content_is_partial_until_cleanup():
     assert p.partials == 0
 
 
-def test_detail_never_escalates_but_counts():
+def test_detail_never_escalates_and_does_not_count():
     p = screen.Policy()
     for _ in range(screen.CLEANUP_EVERY * 2):
         mode, speed, _region = p.plan("detail", (112, 104, 12, 16))
         assert (mode, speed) == (screen.PARTIAL, screen.TURBO)
-    assert p.plan("content", screen.CONTENT)[0] == screen.FULL
+    assert p.partials == 0
+    assert p.plan("content", screen.CONTENT)[0] == screen.PARTIAL
 
 
 def test_unknown_kind_raises():
@@ -56,10 +57,14 @@ def test_unknown_kind_raises():
 
 
 def test_project_regions_fit_left_of_qr_and_on_screen():
+    # Las regiones de partial_update se expanden a bloques de 8px (screen.align):
+    # una línea y el QR no deben terminar compartiendo el mismo bloque alineado,
+    # o un refresco parcial de una pisaría al otro.
+    qr_x0, _qr_y0, _qr_w, _qr_h = screen.align(*projects_screen.QR_REGION)
     for project in projects.PROJECTS:
         for i in range(len(project["lines"])):
-            x, y, w, h = projects_screen.line_region(i)
-            assert x + w <= projects_screen.QR_REGION[0]
+            x, y, w, h = screen.align(*projects_screen.line_region(i))
+            assert x + w <= qr_x0
             assert y + h <= screen.HEIGHT
     x, y, w, h = projects_screen.QR_REGION
     assert x + w <= screen.WIDTH and y + h <= screen.HEIGHT

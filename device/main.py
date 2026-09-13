@@ -20,6 +20,7 @@ APP_PATH = "data/app.json"
 CONTACT_PATH = "assets/contact.json"
 BLINK_MS = 600
 BATTERY_AWAKE_MS = 10000
+USB_BLINK_MS = 60000
 
 woken = badger2040.woken_by_button()
 d = badger2040.Badger2040()
@@ -112,6 +113,7 @@ def main():
     cursor_on = True
     now = time.ticks_ms()
     awake_until = time.ticks_add(now, BATTERY_AWAKE_MS)
+    blink_until = time.ticks_add(now, USB_BLINK_MS)
     next_blink = time.ticks_add(now, BLINK_MS)
     if not woken:
         app["tab"] = "badge"
@@ -144,33 +146,38 @@ def main():
             cursor_on = True
             now = time.ticks_ms()
             awake_until = time.ticks_add(now, BATTERY_AWAKE_MS)
+            blink_until = time.ticks_add(now, USB_BLINK_MS)
             next_blink = time.ticks_add(now, BLINK_MS)
             continue
         if queue.pending():
             time.sleep_ms(10)
             continue
         usb = on_usb()
+        # En USB nunca se apaga: sólo importa si todavía estamos dentro de la
+        # ventana de parpadeo (se reinicia con cada evento). En batería, la
+        # ventana de "despierto" antes de halt() se mantiene igual que antes.
         if usb:
-            # No dejar que awake_until quede viejo mientras hay USB: si se desenchufa,
-            # el conteo de BATTERY_AWAKE_MS debe arrancar recién ahí, no de hace rato.
-            awake_until = time.ticks_add(now, BATTERY_AWAKE_MS)
-        awake = usb or time.ticks_diff(awake_until, now) > 0
-        if awake and time.ticks_diff(now, next_blink) >= 0:
+            blinking = time.ticks_diff(blink_until, now) > 0
+        else:
+            blinking = time.ticks_diff(awake_until, now) > 0
+        if blinking and time.ticks_diff(now, next_blink) >= 0:
             region = draw_cursor(not cursor_on)
             if region is not None:
                 cursor_on = not cursor_on
                 screen.show(d, policy, "detail", region)
             next_blink = time.ticks_add(time.ticks_ms(), BLINK_MS)
-        if not awake:
-            if not cursor_on:
-                region = draw_cursor(True)
-                if region is not None:
-                    screen.show(d, policy, "detail", region)
-                cursor_on = True
+        if not blinking and not cursor_on:
+            # Se acabó la ventana de parpadeo (USB) o el rato despierto (batería):
+            # dejar el cursor sólido una sola vez y no seguir titilando.
+            region = draw_cursor(True)
+            if region is not None:
+                screen.show(d, policy, "detail", region)
+            cursor_on = True
+        if not usb and not blinking:
             if queue.pending():
                 continue
             d.halt()
-            # Si seguimos vivos (USB conectado o botón apretado), seguir atendiendo.
+            # Si seguimos vivos (botón apretado), seguir atendiendo.
             awake_until = time.ticks_add(time.ticks_ms(), BATTERY_AWAKE_MS)
         time.sleep_ms(10)
 
@@ -180,6 +187,7 @@ def error_screen(exc):
     d.text("Error", 4, 4, 288, 2)
     d.text(repr(exc), 4, 26, 288, 1)
     d.text("Cualquier botón reinicia", 4, 116, 288, 1)
+    d.set_update_speed(badger2040.UPDATE_MEDIUM)
     d.update()
 
 

@@ -65,5 +65,7 @@ def test_project_lines_fit_the_screen():
         assert len(p["lines"]) <= 9
         assert p["url"].startswith("https://")
         for line in p["lines"]:
-            assert pixfont.measure(line, 1, 1) <= 176, line
+            # 168: ancho real de projects_screen.line_region, no el viejo 176
+            # (reducido para no compartir bloque alineado de 8px con el QR).
+            assert pixfont.measure(line, 1, 1) <= 168, line
             assert "¿" not in line and all(ord(c) < 256 for c in line)
