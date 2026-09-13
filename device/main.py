@@ -26,7 +26,7 @@ BUTTONS = (
 
 woken = badger2040.woken_by_button()
 d = badger2040.Badger2040()
-DEV_MODE = not woken and d.pressed(badger2040.BUTTON_A) and d.pressed(badger2040.BUTTON_C)
+DEV_MODE = badger2040.pressed_to_wake(badger2040.BUTTON_A) and badger2040.pressed_to_wake(badger2040.BUTTON_C)
 jpeg = jpegdec.JPEG(d.display)
 link_items = links.items(state.load(CONTACT_PATH, links.CONTACT_DEFAULTS))
 app = state.load(APP_PATH, nav.DEFAULTS)

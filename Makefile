@@ -18,7 +18,7 @@ assets:
 preview:
 	PYTHONDONTWRITEBYTECODE=1 uv run --with pillow --with segno python sim/preview.py
 
-# Si el badge no responde: mantener A+C y tocar RESET (o reconectar USB) para entrar en modo dev, y correr make deploy.
+# Si el badge no responde: enchufar el USB manteniendo A+C (modo dev) y correr make deploy.
 # Precompila todo menos main.py a .mpy: el badge no compila fuentes en cada wake a batería.
 build: test
 	test -f device/assets/contact.json
