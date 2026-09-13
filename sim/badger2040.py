@@ -90,3 +90,6 @@ class Badger2040:
 
     def update(self):
         self.updates += 1
+
+    def partial_update(self, x, y, w, h):
+        self.updates += 1

@@ -4,9 +4,11 @@ import ui
 PORTRAIT = "assets/portrait.jpg"
 NAME = "Ivan Cortes"
 ROLE = "Full-stack dev"
+PROMPT_X = 112
+PROMPT_Y = 104
 
 
-def render(d, jpeg):
+def draw(d, jpeg):
     ui.clear(d)
     ui.tabs(d, "badge")
     ui.window(d, 2, 14, 100, 112, "ivan.jpg")
@@ -15,5 +17,16 @@ def render(d, jpeg):
     d.text(NAME, 112, 28, 184, 2)
     pixfont.text(d, ROLE, 112, 52)
     pixfont.text(d, "dishape.dev", 112, 70)
-    d.text("$ _", 112, 104, 184, 2)
-    d.update()
+    d.text("$", PROMPT_X, PROMPT_Y, 184, 2)
+    cursor(d, True)
+
+
+def cursor(d, visible):
+    x = PROMPT_X + d.measure_text("$ ", 2)
+    w = d.measure_text("_", 2)
+    d.set_pen(ui.WHITE)
+    d.rectangle(x, PROMPT_Y, w, 16)
+    d.set_pen(ui.BLACK)
+    if visible:
+        d.text("_", x, PROMPT_Y, 184, 2)
+    return (x, PROMPT_Y, w, 16)

@@ -12,6 +12,7 @@ import links_screen
 import nav
 import projects
 import projects_screen
+import screen
 import state
 import ui
 
@@ -31,19 +32,20 @@ jpeg = jpegdec.JPEG(d.display)
 link_items = links.items(state.load(CONTACT_PATH, links.CONTACT_DEFAULTS))
 app = state.load(APP_PATH, nav.DEFAULTS)
 queue = buttons.install()
+policy = screen.Policy()
 if woken:
     buttons.add_wake_buttons(queue)
 
 
-def render():
-    d.set_update_speed(badger2040.UPDATE_MEDIUM)
+def render(kind):
     if app["tab"] == "links":
-        links_screen.render(d, link_items, app["link"])
+        links_screen.draw(d, link_items, app["link"])
     elif app["tab"] == "projects":
         project = projects.PROJECTS[app["project"] % len(projects.PROJECTS)]
-        projects_screen.render(d, project)
+        projects_screen.draw(d, project)
     else:
-        badge_screen.render(d, jpeg)
+        badge_screen.draw(d, jpeg)
+    screen.show(d, policy, kind, screen.CONTENT)
 
 
 def wait_release():
@@ -58,7 +60,7 @@ def main():
         app["tab"] = "badge"
         app["combo"] = 0
         state.save(APP_PATH, app)
-        render()
+        render("tab")
     while True:
         d.keepalive()
         name = queue.pop(time.ticks_ms())
@@ -77,13 +79,14 @@ def main():
             quiz_screen.run(d, jpeg, random, queue)
             app["tab"] = "badge"
             state.save(APP_PATH, app)
-            render()
+            render("tab")
         else:
             if app != before_app:
                 state.save(APP_PATH, app)
-            after = (app["tab"], app["link"], app["project"])
-            if after != before:
-                render()
+            if app["tab"] != before[0]:
+                render("tab")
+            elif (app["link"], app["project"]) != before[1:]:
+                render("content")
 
 
 def error_screen(exc):

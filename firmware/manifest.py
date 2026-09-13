@@ -15,6 +15,7 @@ freeze(
         "projects_screen.py",
         "quiz_engine.py",
         "quiz_screen.py",
+        "screen.py",
         "state.py",
         "ui.py",
     ),

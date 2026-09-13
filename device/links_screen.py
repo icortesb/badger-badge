@@ -4,12 +4,11 @@ import ui
 QR_BOX = 112
 
 
-def render(d, items, index):
+def draw(d, items, index):
     ui.clear(d)
     ui.tabs(d, "links")
     if not items:
         d.text("Sin links", 8, 30, 280, 2)
-        d.update()
         return
     index %= len(items)
     item = items[index]
@@ -18,4 +17,3 @@ def render(d, items, index):
     d.text(item["label"], 122, 26, 170, 2)
     pixfont.text(d, item["text"], 122, 50)
     d.text("{}/{}".format(index + 1, len(items)), 122, 112, 170, 1)
-    d.update()
