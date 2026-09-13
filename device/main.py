@@ -26,7 +26,13 @@ BUTTONS = (
 
 woken = badger2040.woken_by_button()
 d = badger2040.Badger2040()
-DEV_MODE = badger2040.pressed_to_wake(badger2040.BUTTON_A) and badger2040.pressed_to_wake(badger2040.BUTTON_C)
+# Sólo entra en modo dev con USB conectado (VBUS_DETECT = GPIO 24 en el Badger 2040):
+# así A+C en batería no puede dejar la placa despierta en el REPL.
+DEV_MODE = (
+    machine.Pin(24, machine.Pin.IN).value() == 1
+    and badger2040.pressed_to_wake(badger2040.BUTTON_A)
+    and badger2040.pressed_to_wake(badger2040.BUTTON_C)
+)
 jpeg = jpegdec.JPEG(d.display)
 link_items = links.items(state.load(CONTACT_PATH, links.CONTACT_DEFAULTS))
 app = state.load(APP_PATH, nav.DEFAULTS)
