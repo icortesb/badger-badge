@@ -26,6 +26,7 @@ def wait(d, idle_ms=IDLE_MS):
             pressed |= read(d)
             while d.pressed_any():
                 d.keepalive()
+                pressed |= read(d)
                 time.sleep_ms(10)
             if "up" in pressed and "down" in pressed:
                 return "exit"

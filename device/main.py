@@ -62,6 +62,7 @@ def main():
         for pin, name in BUTTONS:
             if d.pressed(pin):
                 before = (app["tab"], app["link"], app["project"])
+                before_app = dict(app)
                 app, action = nav.handle(app, name, len(link_items), len(projects.PROJECTS))
                 if action == "quiz":
                     wait_release()
@@ -70,7 +71,8 @@ def main():
                     state.save(APP_PATH, app)
                     render()
                 else:
-                    state.save(APP_PATH, app)
+                    if app != before_app:
+                        state.save(APP_PATH, app)
                     after = (app["tab"], app["link"], app["project"])
                     if after != before:
                         render()
@@ -92,7 +94,7 @@ try:
 except Exception as exc:
     error_screen(exc)
     try:
-        state.save(APP_PATH, nav.DEFAULTS)
+        state.save(APP_PATH, dict(nav.DEFAULTS, tab="error"))
     except Exception:
         pass
     wait_release()
