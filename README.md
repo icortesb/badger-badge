@@ -25,7 +25,7 @@ Badger 2040 (non-W, RP2040, 296×128 1-bit e-ink). The app targets MicroPython 1
 
 ## Setup
 
-Requires [uv](https://docs.astral.sh/uv/), [mpremote](https://docs.micropython.org/en/latest/reference/mpremote.html) and `rsvg-convert`.
+Requires [uv](https://docs.astral.sh/uv/), [mpremote](https://docs.micropython.org/en/latest/reference/mpremote.html), `rsvg-convert`, `podman` (for `make firmware`) and `udisks2` (for `make flash`).
 
 ```sh
 cp device/assets/contact.example.json device/assets/contact.json   # your vCard data (git-ignored)
@@ -41,7 +41,7 @@ make firmware   # podman: builds Pimoroni badger2040 v0.0.5 with the app frozen 
 make flash      # hold BOOT/USR while plugging in USB; installs firmware/out/badge-full.uf2
 ```
 
-`badge-full.uf2` also contains `main.py` and `assets/` (including your `contact.json`), so keep it local. `make flash FW=firmware` installs only the firmware and keeps the files on the badge. Files uploaded with `make deploy` take priority over the frozen modules, so you can iterate without reflashing. On the author's badge, loading the app's modules on each wake went from 927 ms (source files) to 21 ms (frozen).
+`badge-full.uf2` also contains `main.py` and `assets/` (including your `contact.json`), so keep it local. Flashing it replaces the whole badge filesystem, including the quiz leaderboard. `make flash FW=firmware` installs only the firmware and keeps whatever is already on the badge — but a `main.py` or any `.mpy` left there by `make deploy` shadow the frozen modules, so use `make flash` (full, the default) to go back to the frozen build. Files uploaded with `make deploy` take priority over the frozen modules, so you can iterate without reflashing. On the author's badge, loading the app's modules on each wake went from 123 ms (.mpy on the filesystem) to 21 ms (frozen).
 
 `make deploy` erases everything on the badge, including the quiz leaderboard. Back up the factory files first if you want them (`mpremote fs cp -r :. backup/`).
 
