@@ -43,7 +43,7 @@ font:
 
 # Flashea un .uf2 en modo BOOTSEL. make flash (completo) | make flash FW=firmware | make flash UF2=ruta.uf2
 flash:
-	sh tools/flash.sh $(UF2)
+	sh tools/flash.sh "$(UF2)"
 
 # Firmware propio (Pimoroni badger2040 v0.0.5 + app congelada) en podman.
 firmware: test

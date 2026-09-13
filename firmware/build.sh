@@ -15,11 +15,24 @@ DIR2UF2_VERSION=v0.0.4
 PY_DECL_VERSION=v0.0.1
 
 mkdir -p "$WORK" "$OUT"
+# Un run fallido no puede dejar un .uf2 viejo emparejado con uno nuevo a medias.
+rm -f "$OUT"/badge-*.uf2
 cd "$WORK"
 git config --global --add safe.directory '*'
 
 clone() { # repo tag dir
-    [ -d "$3" ] || git clone --depth 1 --branch "$2" "https://github.com/$1.git" "$3"
+    local repo="$1" tag="$2" dir="$3"
+    if [ -d "$dir" ]; then
+        local old
+        old="$(cat "$dir/.tag" 2>/dev/null || echo '(sin .tag)')"
+        if [ "$old" != "$tag" ]; then
+            echo "$dir es $old, se pidió $tag: borrá firmware/.work/$dir" >&2
+            exit 1
+        fi
+    else
+        git clone --depth 1 --branch "$tag" "https://github.com/$repo.git" "$dir"
+        echo "$tag" > "$dir/.tag"
+    fi
 }
 
 if [ ! -f micropython/.submodules-ok ]; then
@@ -37,12 +50,20 @@ clone pimoroni/badger2040 "$BADGER_VERSION" badger2040
 clone gadgetoid/dir2uf2 "$DIR2UF2_VERSION" dir2uf2
 clone gadgetoid/py_decl "$PY_DECL_VERSION" py_decl
 
-if [ ! -f .patched ]; then
-    git -C micropython/lib/pico-sdk apply "$WORK/badger2040/firmware/startup_overclock.patch"
-    git -C micropython apply "$WORK/badger2040/firmware/932f76c6ba64c5a3e68de3324556d9979f09303b.patch"
-    git -C micropython apply "$WORK/badger2040/firmware/micropython_nano_specs.patch"
-    touch .patched
-fi
+# Cada patch se aplica de forma idempotente: si ya está aplicado (el --reverse --check
+# no falla), se lo salta; si no, lo aplica. Así no depende de un marcador global .patched
+# que quedaría desincronizado si se borra sólo uno de los repos clonados.
+apply_patch() { # repo-dir patch-file
+    local dir="$1" patch="$2"
+    if git -C "$dir" apply --reverse --check "$patch" 2>/dev/null; then
+        echo "ya aplicado: $patch"
+    else
+        git -C "$dir" apply "$patch"
+    fi
+}
+apply_patch micropython/lib/pico-sdk "$WORK/badger2040/firmware/startup_overclock.patch"
+apply_patch micropython "$WORK/badger2040/firmware/932f76c6ba64c5a3e68de3324556d9979f09303b.patch"
+apply_patch micropython "$WORK/badger2040/firmware/micropython_nano_specs.patch"
 
 [ -x micropython/mpy-cross/build/mpy-cross ] || make -C micropython/mpy-cross
 
@@ -71,6 +92,7 @@ mkdir -p "$FS"
 cp "$SRC/device/main.py" "$FS/main.py"
 cp -r "$SRC/device/assets" "$FS/assets"
 rm -f "$FS/assets/contact.example.json"
+test -f "$FS/main.py" || { echo "falta $FS/main.py" >&2; exit 1; }
 
 # dir2uf2 divide el manifest por "\n" (open(...).read().split("\n")), así que cualquier
 # línea vacía -incluido un salto de línea final- se vuelve un patrón glob '' inválido
@@ -91,5 +113,6 @@ printf '%s' "$(grep -v '^[[:space:]]*$' "$SRC/firmware/fs-manifest.txt")" > "$MA
     mv badge-firmware-full.uf2 badge-full.uf2
     rm -f full.bin full.uf2
 )
+test -f "$OUT/badge-full.uf2" || { echo "no se generó $OUT/badge-full.uf2" >&2; exit 1; }
 
 ls -l "$OUT"

@@ -14,10 +14,19 @@ while [ ! -e "$dev" ]; do
     sleep 1
 done
 
+# Esperar un toque: el automounter del escritorio puede ganarle la carrera a este script.
+sleep 2
+
 mnt=$(findmnt -n -o TARGET "$dev" || true)
 if [ -z "$mnt" ]; then
-    udisksctl mount -b "$dev" >/dev/null
-    mnt=$(findmnt -n -o TARGET "$dev")
+    if ! udisksctl mount -b "$dev" >/dev/null 2>&1; then
+        # Puede haber fallado porque el automounter ya lo montó justo ahora; reconsultar
+        # antes de rendirse.
+        mnt=$(findmnt -n -o TARGET "$dev" || true)
+        [ -n "$mnt" ] || { echo "No se pudo montar $dev" >&2; exit 1; }
+    else
+        mnt=$(findmnt -n -o TARGET "$dev")
+    fi
 fi
 
 cp "$uf2" "$mnt/"
