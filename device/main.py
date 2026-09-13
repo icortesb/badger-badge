@@ -6,6 +6,7 @@ import badger2040
 import jpegdec
 
 import badge_screen
+import buttons
 import links
 import links_screen
 import nav
@@ -16,13 +17,6 @@ import ui
 
 APP_PATH = "data/app.json"
 CONTACT_PATH = "assets/contact.json"
-BUTTONS = (
-    (badger2040.BUTTON_A, "a"),
-    (badger2040.BUTTON_B, "b"),
-    (badger2040.BUTTON_C, "c"),
-    (badger2040.BUTTON_UP, "up"),
-    (badger2040.BUTTON_DOWN, "down"),
-)
 
 woken = badger2040.woken_by_button()
 d = badger2040.Badger2040()
@@ -36,6 +30,9 @@ DEV_MODE = (
 jpeg = jpegdec.JPEG(d.display)
 link_items = links.items(state.load(CONTACT_PATH, links.CONTACT_DEFAULTS))
 app = state.load(APP_PATH, nav.DEFAULTS)
+queue = buttons.install()
+if woken:
+    buttons.add_wake_buttons(queue)
 
 
 def render():
@@ -64,29 +61,29 @@ def main():
         render()
     while True:
         d.keepalive()
-        for pin, name in BUTTONS:
-            if d.pressed(pin):
-                before = (app["tab"], app["link"], app["project"])
-                before_app = dict(app)
-                app, action = nav.handle(app, name, len(link_items), len(projects.PROJECTS))
-                if action == "quiz":
-                    wait_release()
-                    # Import diferido: el quiz no se carga en cada wake a batería.
-                    import random
-                    import quiz_screen
-                    quiz_screen.run(d, jpeg, random)
-                    app["tab"] = "badge"
-                    state.save(APP_PATH, app)
-                    render()
-                else:
-                    if app != before_app:
-                        state.save(APP_PATH, app)
-                    after = (app["tab"], app["link"], app["project"])
-                    if after != before:
-                        render()
-                wait_release()
-                break
-        d.halt()
+        name = queue.pop(time.ticks_ms())
+        if name is None or name == "exit":
+            if not queue.pending():
+                d.halt()
+            time.sleep_ms(10)
+            continue
+        before = (app["tab"], app["link"], app["project"])
+        before_app = dict(app)
+        app, action = nav.handle(app, name, len(link_items), len(projects.PROJECTS))
+        if action == "quiz":
+            # Import diferido: el quiz no se carga en cada wake a batería.
+            import random
+            import quiz_screen
+            quiz_screen.run(d, jpeg, random, queue)
+            app["tab"] = "badge"
+            state.save(APP_PATH, app)
+            render()
+        else:
+            if app != before_app:
+                state.save(APP_PATH, app)
+            after = (app["tab"], app["link"], app["project"])
+            if after != before:
+                render()
 
 
 def error_screen(exc):

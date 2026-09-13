@@ -93,14 +93,15 @@ def draw_board(d, board, highlight):
     d.update()
 
 
-def _answer(d):
-    button = buttons.wait(d)
+def _answer(d, queue):
+    button = buttons.wait(d, queue)
     while button not in ANSWER_BUTTONS and button != "exit":
-        button = buttons.wait(d)
+        button = buttons.wait(d, queue)
     return button
 
 
-def run(d, jpeg, rng):
+def run(d, jpeg, rng, queue):
+    queue.clear()
     d.set_update_speed(badger2040.UPDATE_FAST)
     questions = state.load(QUIZ_PATH, [])
     round_ = quiz_engine.build_round(questions, rng, exists=lambda image: exists("assets/" + image))
@@ -111,17 +112,17 @@ def run(d, jpeg, rng):
     score = 0
     for n, q in enumerate(round_):
         draw_question(d, jpeg, q, n + 1, total, score)
-        button = _answer(d)
+        button = _answer(d, queue)
         if button == "exit":
             return
         chosen = ANSWER_BUTTONS.index(button)
         if chosen == q["answer"]:
             score += 1
         draw_feedback(d, q, chosen, n + 1, total, score)
-        if buttons.wait(d) == "exit":
+        if buttons.wait(d, queue) == "exit":
             return
     draw_result(d, score, total)
-    if buttons.wait(d) == "exit":
+    if buttons.wait(d, queue) == "exit":
         return
     board = state.load(BOARD_PATH, [])
     highlight = None
@@ -130,7 +131,7 @@ def run(d, jpeg, rng):
         letters, pos = [0, 0, 0], 0
         while pos < 3:
             draw_initials(d, letters, pos)
-            button = buttons.wait(d)
+            button = buttons.wait(d, queue)
             if button == "exit":
                 return
             letters, pos = quiz_engine.step_initials(letters, pos, button)
@@ -138,4 +139,4 @@ def run(d, jpeg, rng):
         board, highlight = quiz_engine.insert_score(board, quiz_engine.initials_text(letters), score)
         state.save(BOARD_PATH, board)
     draw_board(d, board, highlight)
-    buttons.wait(d)
+    buttons.wait(d, queue)
