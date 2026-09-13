@@ -7,7 +7,7 @@ A terminal-styled conference badge for the [Pimoroni Badger 2040](https://shop.p
 - **proyectos** — short project blurbs with a QR to each repo.
 - **hidden quiz** — press `▲ ▲ ▼ ▼ A B` for 10 questions mixing programming-language logos and dev trivia, with a score title and a top-5 leaderboard with initials.
 
-Runs on battery: the badge powers off after each screen change and wakes on any button, keeping the image on the e-ink display.
+Runs on battery: the badge stays awake for about 10 seconds after the last button press, with a blinking cursor, then powers off, keeping the image on the e-ink display, and wakes on any button. On USB it stays powered on; the cursor keeps blinking and stops after a minute of no input.
 
 ## Controls
 
@@ -40,6 +40,8 @@ make deploy     # WIPES the badge, then installs the app precompiled to .mpy
 make firmware   # podman: builds Pimoroni badger2040 v0.0.5 with the app frozen in
 make flash      # hold BOOT/USR while plugging in USB; installs firmware/out/badge-full.uf2
 ```
+
+On USB only, if the badge doesn't come back after `make deploy` or `make flash`, unplug and replug it.
 
 `badge-full.uf2` also contains `main.py` and `assets/` (including your `contact.json`), so keep it local. Flashing it replaces the whole badge filesystem, including the quiz leaderboard. `make flash FW=firmware` installs only the firmware and keeps whatever is already on the badge — but a `main.py` or any `.mpy` left there by `make deploy` shadow the frozen modules, so use `make flash` (full, the default) to go back to the frozen build. Files uploaded with `make deploy` take priority over the frozen modules, so you can iterate without reflashing. On the author's badge, loading the app's modules on each wake went from 123 ms (.mpy on the filesystem) to 21 ms (frozen).
 
