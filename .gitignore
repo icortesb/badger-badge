@@ -4,3 +4,5 @@ __pycache__/
 sim/out/
 tools/.cache/
 build/
+firmware/.work/
+firmware/out/
