@@ -1,4 +1,3 @@
-import random
 import time
 
 import machine
@@ -12,7 +11,6 @@ import links_screen
 import nav
 import projects
 import projects_screen
-import quiz_screen
 import state
 import ui
 
@@ -67,6 +65,9 @@ def main():
                 app, action = nav.handle(app, name, len(link_items), len(projects.PROJECTS))
                 if action == "quiz":
                     wait_release()
+                    # Import diferido: el quiz no se carga en cada wake a batería.
+                    import random
+                    import quiz_screen
                     quiz_screen.run(d, jpeg, random)
                     app["tab"] = "badge"
                     state.save(APP_PATH, app)
