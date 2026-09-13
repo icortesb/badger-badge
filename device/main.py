@@ -54,11 +54,14 @@ def main():
     global app
     if not woken:
         app["tab"] = "badge"
+        app["combo"] = 0
+        state.save(APP_PATH, app)
         render(False)
     while True:
         d.keepalive()
         for pin, name in BUTTONS:
             if d.pressed(pin):
+                before = (app["tab"], app["link"], app["project"])
                 app, action = nav.handle(app, name, len(link_items), len(projects.PROJECTS))
                 if action == "quiz":
                     wait_release()
@@ -68,7 +71,9 @@ def main():
                     render(False)
                 else:
                     state.save(APP_PATH, app)
-                    render(True)
+                    after = (app["tab"], app["link"], app["project"])
+                    if after != before:
+                        render(True)
                 wait_release()
                 break
         d.halt()
@@ -85,8 +90,12 @@ def error_screen(exc):
 try:
     main()
 except Exception as exc:
-    state.save(APP_PATH, nav.DEFAULTS)
     error_screen(exc)
+    try:
+        state.save(APP_PATH, nav.DEFAULTS)
+    except Exception:
+        pass
+    wait_release()
     while not d.pressed_any():
         d.halt()
     machine.reset()

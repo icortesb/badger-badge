@@ -2,7 +2,7 @@ import os
 
 
 def remove_tree(path):
-    for entry in os.ilistdir(path):
+    for entry in list(os.ilistdir(path)):
         name, kind = entry[0], entry[1]
         full = path.rstrip("/") + "/" + name
         if kind == 0x4000:
