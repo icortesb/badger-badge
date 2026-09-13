@@ -13,6 +13,7 @@ assets:
 preview:
 	PYTHONDONTWRITEBYTECODE=1 uv run --with pillow --with segno python sim/preview.py
 
+# Si el badge no responde: mantener A+C y tocar RESET (o reconectar USB) para entrar en modo dev, y correr make deploy.
 deploy: test
 	test -f device/assets/contact.json
 	find device -name __pycache__ -type d -exec rm -rf {} +

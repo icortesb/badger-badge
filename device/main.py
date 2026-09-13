@@ -28,6 +28,7 @@ BUTTONS = (
 
 woken = badger2040.woken_by_button()
 d = badger2040.Badger2040()
+DEV_MODE = not woken and d.pressed(badger2040.BUTTON_A) and d.pressed(badger2040.BUTTON_C)
 jpeg = jpegdec.JPEG(d.display)
 link_items = links.items(state.load(CONTACT_PATH, links.CONTACT_DEFAULTS))
 app = state.load(APP_PATH, nav.DEFAULTS)
@@ -89,15 +90,20 @@ def error_screen(exc):
     d.update()
 
 
-try:
-    main()
-except Exception as exc:
-    error_screen(exc)
+if DEV_MODE:
+    ui.clear(d)
+    d.text("Modo dev: REPL", 4, 40, 288, 2)
+    d.update()
+else:
     try:
-        state.save(APP_PATH, dict(nav.DEFAULTS, tab="error"))
-    except Exception:
-        pass
-    wait_release()
-    while not d.pressed_any():
-        d.halt()
-    machine.reset()
+        main()
+    except Exception as exc:
+        error_screen(exc)
+        try:
+            state.save(APP_PATH, dict(nav.DEFAULTS, tab="error"))
+        except Exception:
+            pass
+        wait_release()
+        while not d.pressed_any():
+            d.halt()
+        machine.reset()
