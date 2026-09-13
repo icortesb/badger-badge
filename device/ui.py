@@ -1,4 +1,5 @@
 import jpegdec
+import qrcode
 
 WIDTH = 296
 HEIGHT = 128
@@ -39,6 +40,23 @@ def window(d, x, y, w, h, title):
     d.text("[" + title + "]", x + 3, y + 2, w, 1)
     d.set_pen(BLACK)
     d.set_font("bitmap8")
+
+
+def qr(d, payload, x, y, box):
+    code = qrcode.QRCode()
+    code.set_text(payload)
+    w, h = code.get_size()
+    module = max(1, box // w)
+    ox = x + (box - module * w) // 2
+    oy = y + (box - module * h) // 2
+    d.set_pen(WHITE)
+    d.rectangle(x, y, box, box)
+    d.set_pen(BLACK)
+    for my in range(h):
+        for mx in range(w):
+            if code.get_module(mx, my):
+                d.rectangle(ox + mx * module, oy + my * module, module, module)
+    return module
 
 
 def image(d, jpeg, path, x, y, w, h):

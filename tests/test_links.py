@@ -1,4 +1,5 @@
 import links
+import pixfont
 import projects
 import state
 
@@ -48,10 +49,16 @@ def test_item_texts_fit_next_to_qr():
         assert len(item["text"]) <= 28
 
 
+def test_item_texts_fit_next_to_qr_at_1_5x():
+    for item in links.items(CONTACT):
+        assert pixfont.measure(item["text"]) <= 172, item["text"]
+
+
 def test_project_lines_fit_the_screen():
     assert [p["name"] for p in projects.PROJECTS] == ["cupstui", "lazykuma"]
     for p in projects.PROJECTS:
-        assert len(p["lines"]) <= 10
+        assert len(p["lines"]) <= 9
+        assert p["url"].startswith("https://")
         for line in p["lines"]:
-            assert len(line) <= 46, line
+            assert pixfont.measure(line, 1, 1) <= 176, line
             assert "¿" not in line and all(ord(c) < 256 for c in line)

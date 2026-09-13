@@ -5,7 +5,7 @@ MP = mpremote connect $(PORT)
 .PHONY: test assets preview deploy font
 
 test:
-	PYTHONDONTWRITEBYTECODE=1 uv run --with pytest --with pillow pytest -q
+	PYTHONDONTWRITEBYTECODE=1 uv run --with pytest --with pillow --with segno pytest -q
 
 assets:
 	uv run --with pillow python tools/build_assets.py --photo $(PHOTO)

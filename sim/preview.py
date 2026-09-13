@@ -28,15 +28,16 @@ def main():
     import projects
     import projects_screen
     import state
+    import ui
 
     shot("badge", badge_screen.render)
     items = links.items(state.load("assets/contact.json", links.CONTACT_DEFAULTS))
     for i, item in enumerate(items):
         shot("links-{}".format(i), lambda d, j, i=i: links_screen.render(d, items, i))
-        module = links_screen.draw_qr(badger2040.Badger2040(), item["payload"], 0, 0, links_screen.QR_BOX)
+        module = ui.qr(badger2040.Badger2040(), item["payload"], 0, 0, links_screen.QR_BOX)
         print("  {} -> módulo de {} px".format(item["label"], module))
     for p in projects.PROJECTS:
-        shot("project-" + p["name"], lambda d, j, p=p: projects_screen.render(d, p, False))
+        shot("project-" + p["name"], lambda d, j, p=p: projects_screen.render(d, p))
 
     import random
 

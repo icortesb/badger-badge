@@ -33,13 +33,13 @@ link_items = links.items(state.load(CONTACT_PATH, links.CONTACT_DEFAULTS))
 app = state.load(APP_PATH, nav.DEFAULTS)
 
 
-def render(animate):
+def render():
     d.set_update_speed(badger2040.UPDATE_MEDIUM)
     if app["tab"] == "links":
         links_screen.render(d, link_items, app["link"])
     elif app["tab"] == "projects":
         project = projects.PROJECTS[app["project"] % len(projects.PROJECTS)]
-        projects_screen.render(d, project, animate)
+        projects_screen.render(d, project)
     else:
         badge_screen.render(d, jpeg)
 
@@ -56,7 +56,7 @@ def main():
         app["tab"] = "badge"
         app["combo"] = 0
         state.save(APP_PATH, app)
-        render(False)
+        render()
     while True:
         d.keepalive()
         for pin, name in BUTTONS:
@@ -68,12 +68,12 @@ def main():
                     quiz_screen.run(d, jpeg, random)
                     app["tab"] = "badge"
                     state.save(APP_PATH, app)
-                    render(False)
+                    render()
                 else:
                     state.save(APP_PATH, app)
                     after = (app["tab"], app["link"], app["project"])
                     if after != before:
-                        render(True)
+                        render()
                 wait_release()
                 break
         d.halt()
