@@ -7,7 +7,7 @@ import state
 import ui
 
 QUIZ_PATH = "assets/quiz.json"
-BOARD_PATH = "state/leaderboard.json"
+BOARD_PATH = "data/leaderboard.json"
 ANSWER_BUTTONS = ("a", "b", "c")
 
 

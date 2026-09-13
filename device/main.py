@@ -16,7 +16,7 @@ import quiz_screen
 import state
 import ui
 
-APP_PATH = "state/app.json"
+APP_PATH = "data/app.json"
 CONTACT_PATH = "assets/contact.json"
 BUTTONS = (
     (badger2040.BUTTON_A, "a"),
