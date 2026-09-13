@@ -45,6 +45,7 @@ def image(d, jpeg, path, x, y, w, h):
     try:
         jpeg.open_file(path)
         jpeg.decode(x, y, jpegdec.JPEG_SCALE_FULL, dither=False)
+        d.set_pen(BLACK)
     except OSError:
         d.set_pen(BLACK)
         d.rectangle(x, y, w, h)

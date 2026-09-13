@@ -16,3 +16,4 @@ class JPEG:
         mode = Image.Dither.FLOYDSTEINBERG if dither else Image.Dither.NONE
         img = Image.open(self.path).convert("L").convert("1", dither=mode)
         self.display.image.paste(img, (x, y))
+        self.display.set_pen(15)
