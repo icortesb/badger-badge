@@ -72,12 +72,20 @@ cp "$SRC/device/main.py" "$FS/main.py"
 cp -r "$SRC/device/assets" "$FS/assets"
 rm -f "$FS/assets/contact.example.json"
 
+# dir2uf2 divide el manifest por "\n" (open(...).read().split("\n")), así que cualquier
+# línea vacía -incluido un salto de línea final- se vuelve un patrón glob '' inválido
+# (ValueError: Unacceptable pattern: ''). En vez de depender de que fs-manifest.txt no
+# tenga línea final (frágil: cualquier editor la reintroduce), generamos acá una copia
+# sin líneas en blanco y sin salto de línea final.
+MANIFEST_CLEAN="$WORK/fs-manifest.clean.txt"
+printf '%s' "$(grep -v '^[[:space:]]*$' "$SRC/firmware/fs-manifest.txt")" > "$MANIFEST_CLEAN"
+
 # dir2uf2 escribe <stem del uf2 base>-<stem de --filename>.uf2 en el directorio actual.
 (
     cd "$OUT"
     PYTHONPATH="$WORK/py_decl" python3 "$WORK/dir2uf2/dir2uf2" \
         --append-to "$OUT/badge-firmware.uf2" \
-        --manifest "$SRC/firmware/fs-manifest.txt" \
+        --manifest "$MANIFEST_CLEAN" \
         --filename full.uf2 \
         "$FS/"
     mv badge-firmware-full.uf2 badge-full.uf2
