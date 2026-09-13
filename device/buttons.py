@@ -5,27 +5,30 @@ IDLE_MS = 120000
 PINS = ((12, "a"), (13, "b"), (14, "c"), (15, "up"), (11, "down"))
 CHORD = ("up", "down")
 
-
-def _diff(a, b):
-    # ticks_ms envuelve en 2^30: usar ticks_diff cuando está disponible (MicroPython);
-    # en CPython (tests) el módulo time no lo tiene, así que restamos directo.
-    try:
-        import time
-        return time.ticks_diff(a, b)
-    except (AttributeError, ImportError):
+# ticks_ms envuelve en 2^30: usar ticks_diff cuando está disponible (MicroPython);
+# en CPython (tests) el módulo time no lo tiene, así que restamos directo.
+try:
+    from time import ticks_diff as _diff
+except ImportError:
+    def _diff(a, b):
         return a - b
 
 
 class ButtonQueue:
-    def __init__(self):
+    def __init__(self, chord=False):
         self._events = []
         self._last = {}
+        # El combo ▲+▼ ("exit") sólo tiene sentido dentro del quiz; fuera de él,
+        # esperar CHORD_MS a un posible partner sólo agrega latencia a la navegación.
+        self.chord = chord
 
     def push(self, name, now_ms):
         last = self._last.get(name)
+        # Registrar siempre, incluso si se descarta por rebote: un tren de rebotes
+        # sigue extendiendo la ventana de debounce en vez de reiniciarla desde el primero.
+        self._last[name] = now_ms
         if last is not None and _diff(now_ms, last) < DEBOUNCE_MS:
             return
-        self._last[name] = now_ms
         self._events.append((name, now_ms))
 
     def pending(self):
@@ -38,7 +41,7 @@ class ButtonQueue:
         if not self._events:
             return None
         name, at = self._events[0]
-        if name in CHORD:
+        if self.chord and name in CHORD:
             partner = self._events[1] if len(self._events) > 1 else None
             if partner is not None and partner[0] in CHORD and partner[0] != name and _diff(partner[1], at) < CHORD_MS:
                 del self._events[0:2]
@@ -57,7 +60,10 @@ def install():
     queue = ButtonQueue()
     for pin, name in PINS:
         def handler(_pin, name=name):
-            queue.push(name, time.ticks_ms())
+            # El flanco de subida puede llegar con la línea ya vuelta a bajar (rebote
+            # de contacto muy corto): sólo encolar si sigue en alto.
+            if _pin.value() == 1:
+                queue.push(name, time.ticks_ms())
 
         badger2040.BUTTONS[pin].irq(trigger=machine.Pin.IRQ_RISING, handler=handler)
     return queue

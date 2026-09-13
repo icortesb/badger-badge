@@ -101,6 +101,16 @@ def _answer(d, queue):
 
 
 def run(d, jpeg, rng, queue):
+    # El combo ▲+▼ para salir del quiz sólo tiene que valer acá adentro; afuera
+    # (nav normal), esperar CHORD_MS a un partner sólo demoraría ▲/▼.
+    queue.chord = True
+    try:
+        _run(d, jpeg, rng, queue)
+    finally:
+        queue.chord = False
+
+
+def _run(d, jpeg, rng, queue):
     queue.clear()
     d.set_update_speed(badger2040.UPDATE_FAST)
     questions = state.load(QUIZ_PATH, [])
@@ -112,6 +122,7 @@ def run(d, jpeg, rng, queue):
     score = 0
     for n, q in enumerate(round_):
         draw_question(d, jpeg, q, n + 1, total, score)
+        queue.clear()
         button = _answer(d, queue)
         if button == "exit":
             return
@@ -119,9 +130,11 @@ def run(d, jpeg, rng, queue):
         if chosen == q["answer"]:
             score += 1
         draw_feedback(d, q, chosen, n + 1, total, score)
+        queue.clear()
         if buttons.wait(d, queue) == "exit":
             return
     draw_result(d, score, total)
+    queue.clear()
     if buttons.wait(d, queue) == "exit":
         return
     board = state.load(BOARD_PATH, [])
@@ -131,6 +144,7 @@ def run(d, jpeg, rng, queue):
         letters, pos = [0, 0, 0], 0
         while pos < 3:
             draw_initials(d, letters, pos)
+            queue.clear()
             button = buttons.wait(d, queue)
             if button == "exit":
                 return
