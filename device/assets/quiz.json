@@ -61,5 +61,5 @@
   {"type": "trivia", "level": 3, "question": "Según el teorema CAP, ante una partición de red elegís entre...", "options": ["Consistencia o disponibilidad", "Latencia o throughput", "Durabilidad o aislamiento"], "answer": 0, "explain": "La P no es opcional: la red siempre puede fallar."},
   {"type": "trivia", "level": 3, "question": "Qué compara 'a is b' en Python?", "options": ["Identidad", "Valor", "Tipo"], "answer": 0, "explain": "Si son el mismo objeto. Para el valor se usa ==."},
   {"type": "trivia", "level": 3, "question": "Qué significa HTTP 451?", "options": ["Bloqueado por razones legales", "Demasiadas requests", "Payload muy grande"], "answer": 0, "explain": "Homenaje a Fahrenheit 451."},
-  {"type": "trivia", "level": 3, "question": "Qué hace :(){ :|:& };: en bash?", "options": ["Crea procesos hasta colgar todo", "Borra tu home", "Formatea el disco"], "answer": 0, "explain": "Un fork bomb: una función que se llama dos veces a sí misma."}
+  {"type": "trivia", "level": 3, "question": "Qué hace set -e en un script de bash?", "options": ["Corta el script si un comando falla", "Muestra cada comando al ejecutarlo", "Exporta todas las variables"], "answer": 0, "explain": "Frena ante el primer error. Para ver cada comando se usa set -x."}
 ]
