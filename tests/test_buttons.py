@@ -83,3 +83,7 @@ def test_clear_and_empty_pop():
     q.clear()
     assert not q.pending()
     assert q.pop(10) is None
+
+
+def test_diff_falls_back_to_plain_subtraction_on_cpython():
+    assert buttons._diff(10, 3) == 7

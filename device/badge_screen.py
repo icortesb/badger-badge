@@ -22,6 +22,7 @@ def draw(d, jpeg):
 
 
 def cursor(d, visible):
+    d.set_font("bitmap8")
     x = PROMPT_X + d.measure_text("$ ", 2)
     w = d.measure_text("_", 2)
     d.set_pen(ui.WHITE)

@@ -38,6 +38,7 @@ def draw(d, project, lines=None, qr=True):
 
 
 def cursor(d, project, visible):
+    d.set_font("bitmap8")
     i = len(project["lines"]) - 1
     prefix = project["lines"][i][:-1]
     x = 4 + d.measure_text(prefix, 1)

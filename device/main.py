@@ -39,6 +39,9 @@ if woken:
     buttons.add_wake_buttons(queue)
 
 vbus_pin = machine.Pin(24, machine.Pin.IN)
+# En un wake a batería (reboot) el framebuffer arranca en cero (negro) y sin fuente
+# bitmap8 seteada: draw_cursor no puede parpetear sobre eso sin pintar la pestaña primero.
+framebuffer_ready = False
 
 
 def on_usb():
@@ -50,6 +53,13 @@ def current_project():
 
 
 def draw_cursor(visible):
+    global framebuffer_ready
+    if not framebuffer_ready:
+        if app["tab"] == "badge":
+            badge_screen.draw(d, jpeg)
+        elif app["tab"] == "projects":
+            projects_screen.draw(d, current_project())
+        framebuffer_ready = True
     if app["tab"] == "badge":
         return badge_screen.cursor(d, visible)
     if app["tab"] == "projects":
@@ -69,19 +79,26 @@ def type_project(kind):
             return
         projects_screen.draw_line(d, project, i)
         screen.show(d, policy, "detail", projects_screen.line_region(i))
+    if queue.pending():
+        projects_screen.draw(d, project)
+        screen.show(d, policy, "content", screen.CONTENT)
+        return
     projects_screen.draw_qr(d, project)
     screen.show(d, policy, "detail", projects_screen.QR_REGION)
 
 
 def render(kind):
+    global framebuffer_ready
     if app["tab"] == "projects":
         type_project(kind)
+        framebuffer_ready = True
         return
     if app["tab"] == "links":
         links_screen.draw(d, link_items, app["link"])
     else:
         badge_screen.draw(d, jpeg)
     screen.show(d, policy, kind, screen.CONTENT)
+    framebuffer_ready = True
 
 
 def wait_release():
@@ -133,6 +150,10 @@ def main():
             time.sleep_ms(10)
             continue
         usb = on_usb()
+        if usb:
+            # No dejar que awake_until quede viejo mientras hay USB: si se desenchufa,
+            # el conteo de BATTERY_AWAKE_MS debe arrancar recién ahí, no de hace rato.
+            awake_until = time.ticks_add(now, BATTERY_AWAKE_MS)
         awake = usb or time.ticks_diff(awake_until, now) > 0
         if awake and time.ticks_diff(now, next_blink) >= 0:
             region = draw_cursor(not cursor_on)
@@ -146,6 +167,8 @@ def main():
                 if region is not None:
                     screen.show(d, policy, "detail", region)
                 cursor_on = True
+            if queue.pending():
+                continue
             d.halt()
             # Si seguimos vivos (USB conectado o botón apretado), seguir atendiendo.
             awake_until = time.ticks_add(time.ticks_ms(), BATTERY_AWAKE_MS)

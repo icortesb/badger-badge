@@ -6,6 +6,16 @@ PINS = ((12, "a"), (13, "b"), (14, "c"), (15, "up"), (11, "down"))
 CHORD = ("up", "down")
 
 
+def _diff(a, b):
+    # ticks_ms envuelve en 2^30: usar ticks_diff cuando está disponible (MicroPython);
+    # en CPython (tests) el módulo time no lo tiene, así que restamos directo.
+    try:
+        import time
+        return time.ticks_diff(a, b)
+    except (AttributeError, ImportError):
+        return a - b
+
+
 class ButtonQueue:
     def __init__(self):
         self._events = []
@@ -13,7 +23,7 @@ class ButtonQueue:
 
     def push(self, name, now_ms):
         last = self._last.get(name)
-        if last is not None and now_ms - last < DEBOUNCE_MS:
+        if last is not None and _diff(now_ms, last) < DEBOUNCE_MS:
             return
         self._last[name] = now_ms
         self._events.append((name, now_ms))
@@ -30,10 +40,10 @@ class ButtonQueue:
         name, at = self._events[0]
         if name in CHORD:
             partner = self._events[1] if len(self._events) > 1 else None
-            if partner is not None and partner[0] in CHORD and partner[0] != name and partner[1] - at < CHORD_MS:
+            if partner is not None and partner[0] in CHORD and partner[0] != name and _diff(partner[1], at) < CHORD_MS:
                 del self._events[0:2]
                 return "exit"
-            if partner is None and now_ms - at < CHORD_MS:
+            if partner is None and _diff(now_ms, at) < CHORD_MS:
                 return None
         del self._events[0]
         return name
