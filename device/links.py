@@ -22,5 +22,5 @@ def vcard(contact):
 def items(contact):
     result = [{"label": label, "text": text, "payload": payload} for label, text, payload in BASE]
     if contact and contact.get("first"):
-        result.append({"label": "Contacto", "text": "Guardá mi contacto", "payload": vcard(contact)})
+        result.append({"label": "Contacto", "text": "Agendame", "payload": vcard(contact)})
     return result

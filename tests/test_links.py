@@ -54,6 +54,11 @@ def test_item_texts_fit_next_to_qr_at_1_5x():
         assert pixfont.measure(item["text"]) <= 172, item["text"]
 
 
+def test_item_texts_are_pure_ascii():
+    for item in links.items(CONTACT):
+        assert all(ord(c) < 128 for c in item["text"]), item["text"]
+
+
 def test_project_lines_fit_the_screen():
     assert [p["name"] for p in projects.PROJECTS] == ["cupstui", "lazykuma"]
     for p in projects.PROJECTS:
