@@ -8,7 +8,7 @@ def test_level_clamps_below_empty():
 
 
 def test_level_at_empty_is_zero():
-    assert bat.level(2.2) == 0
+    assert bat.level(2.3) == 0
 
 
 def test_level_at_full_is_max():
@@ -19,9 +19,9 @@ def test_level_clamps_above_full():
     assert bat.level(3.4) == 4
 
 
-def test_level_midpoints():
-    assert bat.level(2.6) == 2
-    assert bat.level(2.8) == 3
+def test_level_midpoint():
+    expected = int((2.65 - bat.EMPTY_V) / (bat.FULL_V - bat.EMPTY_V) * bat.LEVELS + 0.5)
+    assert bat.level(2.65) == expected
 
 
 def test_label_formats_one_decimal():
@@ -29,25 +29,23 @@ def test_label_formats_one_decimal():
 
 
 def test_level_is_monotonic_between_empty_and_full():
-    volts = 2.2
+    volts = bat.EMPTY_V
     prev = bat.level(volts)
-    while volts <= 3.0 + 1e-9:
+    while volts <= bat.FULL_V + 1e-9:
         cur = bat.level(volts)
         assert cur >= prev
         prev = cur
         volts += 0.05
 
 
-def test_volts_from_adc_matches_vref_calibrated_formula():
-    # battery_raw=21763, vref_raw=26978: par que efectivamente da ~3.0V con la
-    # fórmula del ejemplo de Pimoroni (con battery_raw=32767 da ~4.52V, no ~3.0V:
-    # ver nota en el reporte de esta rama sobre el ajuste de estos valores).
-    battery_raw, vref_raw = 21763, 26978
-    vdd = 1.24 * (65535 / vref_raw)
-    expected = (battery_raw / 65535) * 3 * vdd
-    assert bat.volts_from_adc(battery_raw, vref_raw) == pytest.approx(expected)
-    assert expected == pytest.approx(3.0, abs=0.02)
+def test_vdd_from_ref_matches_measured_raw():
+    assert bat.vdd_from_ref(25094) == pytest.approx(3.238, abs=0.005)
 
 
-def test_volts_from_adc_zero_vref_is_zero():
-    assert bat.volts_from_adc(1000, 0) == 0.0
+def test_vdd_from_ref_zero_raw_is_zero():
+    assert bat.vdd_from_ref(0) == 0.0
+
+
+def test_vdd_from_ref_lower_supply_gives_larger_raw_and_smaller_vdd():
+    assert 27000 < 30000
+    assert bat.vdd_from_ref(27000) > bat.vdd_from_ref(30000)
