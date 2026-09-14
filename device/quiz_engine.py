@@ -96,3 +96,12 @@ def step_initials(letters, pos, button):
 
 def initials_text(letters):
     return "".join(LETTERS[i] for i in letters)
+
+
+def bump_rounds(stats):
+    rounds = stats.get("rounds", 0)
+    if not isinstance(rounds, int) or isinstance(rounds, bool) or rounds < 0:
+        rounds = 0
+    new_stats = dict(stats)
+    new_stats["rounds"] = rounds + 1
+    return new_stats

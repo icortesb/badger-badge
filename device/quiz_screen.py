@@ -8,6 +8,8 @@ import ui
 
 QUIZ_PATH = "assets/quiz.json"
 BOARD_PATH = "data/leaderboard.json"
+STATS_PATH = "data/stats.json"
+STATS_DEFAULTS = {"rounds": 0}
 ANSWER_BUTTONS = ("a", "b", "c")
 
 
@@ -59,9 +61,9 @@ def draw_feedback(d, q, chosen, number, total, score):
     d.update()
 
 
-def draw_result(d, score, total):
+def draw_result(d, score, total, round_no):
     ui.clear(d)
-    header(d, "QUIZ", "fin")
+    header(d, "QUIZ", "partida #{}".format(round_no))
     d.text("{}/{}".format(score, total), 4, 18, 288, 3)
     d.text(quiz_engine.title(score), 4, 50, 288, 2)
     d.text("Cualquier botón sigue", 4, 116, 288, 1)
@@ -108,6 +110,7 @@ def run(d, jpeg, rng, queue):
         _run(d, jpeg, rng, queue)
     finally:
         queue.chord = False
+        d.led(0)
 
 
 def _run(d, jpeg, rng, queue):
@@ -129,11 +132,17 @@ def _run(d, jpeg, rng, queue):
         chosen = ANSWER_BUTTONS.index(button)
         if chosen == q["answer"]:
             score += 1
-        draw_feedback(d, q, chosen, n + 1, total, score)
+            d.led(255)
+            draw_feedback(d, q, chosen, n + 1, total, score)
+            d.led(0)
+        else:
+            draw_feedback(d, q, chosen, n + 1, total, score)
         queue.clear()
         if buttons.wait(d, queue) == "exit":
             return
-    draw_result(d, score, total)
+    stats = quiz_engine.bump_rounds(state.load(STATS_PATH, STATS_DEFAULTS))
+    state.save(STATS_PATH, stats)
+    draw_result(d, score, total, stats["rounds"])
     queue.clear()
     if buttons.wait(d, queue) == "exit":
         return

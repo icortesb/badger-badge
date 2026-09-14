@@ -50,7 +50,7 @@ def main():
     shot("quiz-logo", lambda d, j: quiz_screen.draw_question(d, j, logo, 1, 10, 0))
     shot("quiz-trivia", lambda d, j: quiz_screen.draw_question(d, j, trivia, 2, 10, 1))
     shot("quiz-wrong", lambda d, j: quiz_screen.draw_feedback(d, trivia, (trivia["answer"] + 1) % 3, 2, 10, 1))
-    shot("quiz-result", lambda d, j: quiz_screen.draw_result(d, 7, 10))
+    shot("quiz-result", lambda d, j: quiz_screen.draw_result(d, 7, 10, 37))
     shot("quiz-initials", lambda d, j: quiz_screen.draw_initials(d, [8, 21, 0], 1))
     board = [{"i": "IVA", "s": 9}, {"i": "BOB", "s": 7}, {"i": "ANA", "s": 7}, {"i": "ZED", "s": 4}, {"i": "LOL", "s": 1}]
     shot("quiz-board", lambda d, j: quiz_screen.draw_board(d, board, 1))

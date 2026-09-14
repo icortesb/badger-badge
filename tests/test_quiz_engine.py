@@ -110,3 +110,25 @@ def test_step_initials():
 
 def test_initials_text():
     assert qe.initials_text([8, 21, 0]) == "IVA"
+
+
+def test_bump_rounds_from_empty():
+    assert qe.bump_rounds({})["rounds"] == 1
+
+
+def test_bump_rounds_increments():
+    assert qe.bump_rounds({"rounds": 5})["rounds"] == 6
+
+
+def test_bump_rounds_non_int_counts_as_zero():
+    assert qe.bump_rounds({"rounds": "x"})["rounds"] == 1
+
+
+def test_bump_rounds_negative_counts_as_zero():
+    assert qe.bump_rounds({"rounds": -3})["rounds"] == 1
+
+
+def test_bump_rounds_does_not_mutate_input():
+    stats = {"rounds": 5}
+    qe.bump_rounds(stats)
+    assert stats == {"rounds": 5}
