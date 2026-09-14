@@ -1,3 +1,5 @@
+import pytest
+
 import battery as bat
 
 
@@ -34,3 +36,18 @@ def test_level_is_monotonic_between_empty_and_full():
         assert cur >= prev
         prev = cur
         volts += 0.05
+
+
+def test_volts_from_adc_matches_vref_calibrated_formula():
+    # battery_raw=21763, vref_raw=26978: par que efectivamente da ~3.0V con la
+    # fórmula del ejemplo de Pimoroni (con battery_raw=32767 da ~4.52V, no ~3.0V:
+    # ver nota en el reporte de esta rama sobre el ajuste de estos valores).
+    battery_raw, vref_raw = 21763, 26978
+    vdd = 1.24 * (65535 / vref_raw)
+    expected = (battery_raw / 65535) * 3 * vdd
+    assert bat.volts_from_adc(battery_raw, vref_raw) == pytest.approx(expected)
+    assert expected == pytest.approx(3.0, abs=0.02)
+
+
+def test_volts_from_adc_zero_vref_is_zero():
+    assert bat.volts_from_adc(1000, 0) == 0.0
