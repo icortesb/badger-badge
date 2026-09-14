@@ -4,6 +4,7 @@
 import array
 
 DEBOUNCE_MS = 60
+RELEASE_MS = 30
 CHORD_MS = 150
 IDLE_MS = 120000
 PINS = ((12, "a"), (13, "b"), (14, "c"), (15, "up"), (11, "down"))
@@ -28,14 +29,22 @@ _ring_idx = array.array("i", [0] * RING)
 _ring_ms = array.array("i", [0] * RING)
 _pos = array.array("i", [0, 0])  # [0] = head (IRQ), [1] = tail (drain)
 _last_edge = array.array("i", [-100000] * len(PINS))
+_last_release = array.array("i", [-100000] * len(PINS))
 
 
-def accept_edge(last_ms, now_ms, pressed):
+def accept_edge(last_press_ms, last_release_ms, now_ms):
     # Función pura con la decisión de debounce de la IRQ, testeable sin
-    # hardware: hay que seguir presionado (filtra rebote de liberación) y
-    # que haya pasado DEBOUNCE_MS desde el último flanco ACEPTADO (no desde
-    # el último rebote, así un tren de rebotes no corre la ventana).
-    return bool(pressed) and _diff(now_ms, last_ms) >= DEBOUNCE_MS
+    # hardware. Un solo toque real dispara flancos de subida Y bajada, y con
+    # ambos registrados (IRQ_RISING | IRQ_FALLING) un rebote al soltar puede
+    # volver a leer alto y colarse como un segundo press: no alcanza con medir
+    # desde el último press aceptado, también hay que exigir RELEASE_MS desde
+    # la última liberación vista. Una diferencia negativa (envolvimiento de
+    # ticks_ms) se trata como "ya pasó" en vez de bloquear.
+    since_press = _diff(now_ms, last_press_ms)
+    since_release = _diff(now_ms, last_release_ms)
+    press_ok = since_press < 0 or since_press >= DEBOUNCE_MS
+    release_ok = since_release < 0 or since_release >= RELEASE_MS
+    return press_ok and release_ok
 
 
 def drain(queue):
@@ -68,9 +77,11 @@ class ButtonQueue:
 
     def push(self, name, now_ms):
         # Debounce por software para tests/uso directo; en el badge real el
-        # debounce ya pasó en la IRQ (accept_edge) antes de llegar acá.
+        # debounce ya pasó en la IRQ (accept_edge) antes de llegar acá. No hay
+        # noción de "liberación" en este camino, así que se pasa un sentinel
+        # bien viejo para no bloquear nunca por ese lado.
         last = self._last.get(name, -100000)
-        if not accept_edge(last, now_ms, True):
+        if not accept_edge(last, -100000, now_ms):
             return
         self._last[name] = now_ms
         self._events.append((name, now_ms))
@@ -84,6 +95,10 @@ class ButtonQueue:
         return len(self._events) > 0
 
     def clear(self):
+        # Drenar primero: si no, lo que la IRQ ya había juntado en el ring
+        # queda sin leer y el próximo pop()/pending() (que sí drena) lo trae
+        # de vuelta — justo lo que esto tiene que evitar.
+        self._pull()
         self._events = []
 
     def pop(self, now_ms):
@@ -111,24 +126,31 @@ def install():
     queue.source = lambda: drain(queue)
     for i, (pin, _name) in enumerate(PINS):
         def handler(_pin, i=i):
-            # IRQ dura: nada de asignar memoria acá. El flanco de subida puede
-            # llegar con la línea ya vuelta a bajar (rebote de liberación muy
-            # corto); accept_edge exige que siga en alto.
+            # IRQ dura: nada de asignar memoria acá (sólo enteros chicos,
+            # get/set de array, llamadas a método). Con RISING y FALLING
+            # registrados, cada flanco (de subida o de bajada, incluidos los
+            # rebotes) dispara esto; se relee el pin en vivo para saber cuál
+            # de los dos fue.
             now = time.ticks_ms()
-            if accept_edge(_last_edge[i], now, _pin.value() == 1):
-                head = _pos[0]
-                nxt = head + 1
-                if nxt == RING:
-                    nxt = 0
-                if nxt != _pos[1]:
-                    _ring_idx[head] = i
-                    _ring_ms[head] = now
-                    _pos[0] = nxt
-                # Si el ring está lleno el evento se pierde, pero el debounce
-                # sigue midiendo desde este flanco igual.
-                _last_edge[i] = now
+            if _pin.value() == 1:
+                if accept_edge(_last_edge[i], _last_release[i], now):
+                    head = _pos[0]
+                    nxt = head + 1
+                    if nxt == RING:
+                        nxt = 0
+                    if nxt != _pos[1]:
+                        _ring_idx[head] = i
+                        _ring_ms[head] = now
+                        _pos[0] = nxt
+                    # Si el ring está lleno el evento se pierde, pero el
+                    # debounce sigue midiendo desde este flanco igual.
+                    _last_edge[i] = now
+            else:
+                _last_release[i] = now
 
-        badger2040.BUTTONS[pin].irq(trigger=machine.Pin.IRQ_RISING, handler=handler, hard=True)
+        badger2040.BUTTONS[pin].irq(
+            trigger=machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING, handler=handler, hard=True
+        )
     return queue
 
 

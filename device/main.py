@@ -85,9 +85,7 @@ def type_project(kind):
         screen.show(d, policy, "content", screen.CONTENT)
         return
     projects_screen.draw_qr(d, project)
-    # El QR es denso (112x112): un parche TURBO no termina de asentar los
-    # píxeles y queda gris/lavado. FAST sí lo deja bien negro.
-    screen.show(d, policy, "detail", projects_screen.QR_REGION, speed=screen.FAST)
+    screen.show(d, policy, "detail", projects_screen.QR_REGION)
 
 
 def render(kind):

@@ -33,16 +33,31 @@ def test_debounce_is_per_button():
     assert drain(q, 1000) == ["a", "b"]
 
 
-def test_accept_edge_rejects_when_not_pressed():
-    assert buttons.accept_edge(0, 1000, False) is False
+def test_accept_edge_rejects_right_after_release():
+    # Soltar en 90, apretar de nuevo en 100: sólo 10 ms desde la liberación,
+    # bien por debajo de RELEASE_MS (30) — es rebote de liberación, no un
+    # segundo toque real.
+    assert buttons.accept_edge(0, 90, 100) is False
 
 
-def test_accept_edge_rejects_within_debounce_window():
-    assert buttons.accept_edge(0, buttons.DEBOUNCE_MS - 1, True) is False
+def test_accept_edge_accepts_after_release_and_press_windows_clear():
+    # 40 ms desde la liberación (>=30) y 100 ms desde el último press aceptado
+    # (>=60): toque real.
+    assert buttons.accept_edge(0, 60, 100) is True
 
 
-def test_accept_edge_accepts_at_debounce_window():
-    assert buttons.accept_edge(0, buttons.DEBOUNCE_MS, True) is True
+def test_accept_edge_rejects_within_press_debounce():
+    assert buttons.accept_edge(0, -100000, 50) is False
+
+
+def test_accept_edge_accepts_at_the_press_debounce_boundary():
+    assert buttons.accept_edge(0, -100000, buttons.DEBOUNCE_MS) is True
+
+
+def test_accept_edge_treats_negative_diffs_as_elapsed():
+    # now_ms "antes" que el último press/release (envolvimiento de ticks_ms):
+    # tratar como si ya hubiera pasado, no bloquear para siempre.
+    assert buttons.accept_edge(1000, 1000, 0) is True
 
 
 def test_push_raw_skips_debounce():
@@ -177,6 +192,22 @@ def test_clear_and_empty_pop():
     q.clear()
     assert not q.pending()
     assert q.pop(10) is None
+
+
+def test_clear_drains_the_source_before_emptying():
+    # Si clear() no drena primero, lo que la IRQ ya había juntado en el ring
+    # queda ahí sin leer y el próximo pop() (que sí drena) lo devuelve —
+    # justo lo que el quiz necesita evitar al limpiar después de cada refresco.
+    calls = []
+
+    def source():
+        calls.append(1)
+        if len(calls) == 1:
+            q.push_raw("a", 0)
+
+    q = buttons.ButtonQueue(source=source)
+    q.clear()
+    assert q.pop(0) is None
 
 
 def test_diff_falls_back_to_plain_subtraction_on_cpython():
