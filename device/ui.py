@@ -1,3 +1,4 @@
+import battery
 import jpegdec
 import qrcode
 
@@ -8,11 +9,31 @@ BLACK = 0
 WHITE = 15
 TAB_LABELS = (("badge", "badge"), ("links", "links"), ("projects", "proyectos"))
 
+battery_volts = None
+
 
 def clear(d):
     d.set_pen(WHITE)
     d.clear()
     d.set_pen(BLACK)
+    d.set_font("bitmap8")
+
+
+def _battery_icon(d, x, v):
+    d.set_font("bitmap6")
+    label = battery.label(v)
+    d.text(label, x, 3, WIDTH, 1)
+    icon_x = x + d.measure_text(label, 1) + 4
+    icon_y = 2
+    d.set_pen(WHITE)
+    d.rectangle(icon_x, icon_y, 17, 7)
+    d.set_pen(BLACK)
+    d.rectangle(icon_x + 1, icon_y + 1, 15, 5)
+    d.set_pen(WHITE)
+    lvl = battery.level(v)
+    for i in range(lvl):
+        d.rectangle(icon_x + 1 + i * 4, icon_y + 1, 3, 5)
+    d.rectangle(icon_x + 17, icon_y + 2, 1, 3)
     d.set_font("bitmap8")
 
 
@@ -22,6 +43,8 @@ def tabs(d, active):
     d.set_pen(WHITE)
     d.set_font("bitmap8")
     d.text("ivan@dishape", 3, 2, WIDTH, 1)
+    if battery_volts is not None:
+        _battery_icon(d, 3 + d.measure_text("ivan@dishape", 1) + 10, battery_volts)
     x = WIDTH - 3
     for key, label in reversed(TAB_LABELS):
         shown = "[" + label + "]" if key == active else label

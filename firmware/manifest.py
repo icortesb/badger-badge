@@ -5,6 +5,7 @@ freeze(
     "/src/device",
     (
         "badge_screen.py",
+        "battery.py",
         "buttons.py",
         "combo.py",
         "links.py",

@@ -6,6 +6,7 @@ import badger2040
 import jpegdec
 
 import badge_screen
+import battery
 import buttons
 import links
 import links_screen
@@ -56,6 +57,7 @@ def current_project():
 def draw_cursor(visible):
     global framebuffer_ready
     if not framebuffer_ready:
+        ui.battery_volts = None if on_usb() else battery.read_volts()
         if app["tab"] == "badge":
             badge_screen.draw(d, jpeg)
         elif app["tab"] == "projects":
@@ -90,6 +92,7 @@ def type_project(kind):
 
 def render(kind):
     global framebuffer_ready
+    ui.battery_volts = None if on_usb() else battery.read_volts()
     if app["tab"] == "projects":
         type_project(kind)
         framebuffer_ready = True

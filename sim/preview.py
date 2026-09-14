@@ -31,6 +31,9 @@ def main():
     import ui
 
     shot("badge", badge_screen.draw)
+    ui.battery_volts = 2.7
+    shot("badge-battery", badge_screen.draw)
+    ui.battery_volts = None
     items = links.items(state.load("assets/contact.json", links.CONTACT_DEFAULTS))
     for i, item in enumerate(items):
         shot("links-{}".format(i), lambda d, j, i=i: links_screen.draw(d, items, i))
