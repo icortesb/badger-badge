@@ -47,6 +47,13 @@ def test_detail_never_escalates_and_does_not_count():
     assert p.plan("content", screen.CONTENT)[0] == screen.PARTIAL
 
 
+def test_detail_speed_override_and_still_does_not_count():
+    p = screen.Policy()
+    aligned = screen.align(112, 104, 12, 16)
+    assert p.plan("detail", (112, 104, 12, 16), speed=screen.FAST) == (screen.PARTIAL, screen.FAST, aligned)
+    assert p.partials == 0
+
+
 def test_unknown_kind_raises():
     p = screen.Policy()
     try:

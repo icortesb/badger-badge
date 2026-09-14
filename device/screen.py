@@ -22,7 +22,7 @@ class Policy:
     def __init__(self):
         self.partials = 0
 
-    def plan(self, kind, region=None):
+    def plan(self, kind, region=None, speed=None):
         if kind == "tab":
             self.partials = 0
             return FULL, FAST, None
@@ -31,19 +31,21 @@ class Policy:
             if self.partials >= CLEANUP_EVERY:
                 self.partials = 0
                 return FULL, FAST, None
-            return PARTIAL, TURBO, align(*region)
+            return PARTIAL, speed or TURBO, align(*region)
         if kind == "detail":
             # Los detalles (cursor, líneas tipeadas, QR) no cuentan para el cleanup
             # periódico: son parches chicos, no el motivo de que el e-ink se ensucie.
-            return PARTIAL, TURBO, align(*region)
+            # `speed` deja pisar el TURBO por defecto: un parche denso (el QR)
+            # no termina de asentar los píxeles con TURBO y queda gris/lavado.
+            return PARTIAL, speed or TURBO, align(*region)
         raise ValueError(kind)
 
 
-def show(d, policy, kind, region=None):
+def show(d, policy, kind, region=None, speed=None):
     import badger2040
 
-    mode, speed, area = policy.plan(kind, region)
-    d.set_update_speed(badger2040.UPDATE_FAST if speed == FAST else badger2040.UPDATE_TURBO)
+    mode, chosen_speed, area = policy.plan(kind, region, speed)
+    d.set_update_speed(badger2040.UPDATE_FAST if chosen_speed == FAST else badger2040.UPDATE_TURBO)
     if mode == FULL:
         d.display.update()
     else:
