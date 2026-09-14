@@ -2,11 +2,13 @@ import combo
 
 TABS = ("badge", "links", "projects")
 TAB_BUTTONS = {"a": "badge", "b": "links", "c": "projects"}
-DEFAULTS = {"tab": "badge", "link": 0, "project": 0, "combo": 0}
+DEFAULTS = {"tab": "badge", "link": 0, "project": 0, "combo": 0, "partials": 0}
 
 
 def _int(value):
-    return value if isinstance(value, int) else 0
+    if isinstance(value, int) and value >= 0:
+        return value
+    return 0
 
 
 def handle(state, button, link_count, project_count):
@@ -14,7 +16,7 @@ def handle(state, button, link_count, project_count):
     s.update(state)
     if s["tab"] not in TABS:
         s["tab"] = "badge"
-    for key in ("link", "project", "combo"):
+    for key in ("link", "project", "combo", "partials"):
         s[key] = _int(s[key])
 
     s["combo"], completed = combo.advance(s["combo"], button)

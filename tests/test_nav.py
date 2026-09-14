@@ -60,3 +60,20 @@ def test_unknown_tab_and_bad_values_are_repaired():
 def test_link_index_normalized_when_count_shrinks():
     new, _ = nav.handle(dict(nav.DEFAULTS, tab="links", link=3), "b", 3, 2)
     assert new["link"] == 0
+
+
+def test_partials_defaults_to_zero():
+    assert nav.DEFAULTS["partials"] == 0
+
+
+def test_partials_is_preserved_through_handle():
+    s = dict(nav.DEFAULTS, partials=5)
+    new, _ = handle(s, "b")
+    assert new["partials"] == 5
+
+
+def test_partials_invalid_values_normalize_to_zero():
+    new, _ = handle({"partials": "x"}, "up")
+    assert new["partials"] == 0
+    new, _ = handle({"partials": -3}, "up")
+    assert new["partials"] == 0

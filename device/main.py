@@ -37,6 +37,7 @@ link_items = links.items(state.load(CONTACT_PATH, links.CONTACT_DEFAULTS))
 app = state.load(APP_PATH, nav.DEFAULTS)
 queue = buttons.install()
 policy = screen.Policy()
+policy.partials = app["partials"]
 if woken:
     buttons.add_wake_buttons(queue)
 
@@ -111,14 +112,14 @@ def wait_release():
         time.sleep_ms(10)
 
 
-def main():
+def main(cold):
     global app
     cursor_on = True
     now = time.ticks_ms()
     awake_until = time.ticks_add(now, BATTERY_AWAKE_MS)
     blink_until = time.ticks_add(now, USB_BLINK_MS)
     next_blink = time.ticks_add(now, BLINK_MS)
-    if not woken:
+    if cold:
         app["tab"] = "badge"
         app["combo"] = 0
         state.save(APP_PATH, app)
@@ -137,9 +138,11 @@ def main():
                 import quiz_screen
                 quiz_screen.run(d, jpeg, random, queue)
                 app["tab"] = "badge"
+                app["partials"] = policy.partials
                 state.save(APP_PATH, app)
                 render("tab")
             else:
+                app["partials"] = policy.partials
                 if app != before_app:
                     state.save(APP_PATH, app)
                 if app["tab"] != before[0]:
@@ -199,15 +202,26 @@ if DEV_MODE:
     d.text("Modo dev: REPL", 4, 40, 288, 2)
     d.update()
 else:
-    try:
-        main()
-    except Exception as exc:
-        error_screen(exc)
+    cold = not woken
+    while True:
         try:
-            state.save(APP_PATH, dict(nav.DEFAULTS, tab="error"))
-        except Exception:
-            pass
-        wait_release()
-        while not d.pressed_any():
-            d.halt()
-        machine.reset()
+            main(cold)
+        except Exception as exc:
+            error_screen(exc)
+            try:
+                state.save(APP_PATH, dict(nav.DEFAULTS, tab="badge"))
+            except Exception:
+                pass
+            queue.clear()
+            wait_release()
+            while not d.pressed_any():
+                if on_usb():
+                    d.keepalive()
+                    time.sleep_ms(50)
+                else:
+                    d.halt()
+            wait_release()
+            queue.clear()
+            app = state.load(APP_PATH, nav.DEFAULTS)
+            policy.partials = app["partials"]
+            cold = True
