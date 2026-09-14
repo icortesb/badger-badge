@@ -4,7 +4,7 @@ MP = mpremote connect $(PORT)
 # Misma versión que el firmware del badge (MicroPython 1.23, mpy v6.3).
 MPY_CROSS = uv tool run --from mpy-cross==1.23.0 mpy-cross
 
-.PHONY: test assets preview build deploy font flash firmware qr
+.PHONY: test assets preview build deploy font flash firmware qr push stats
 
 FW ?= full
 UF2 ?= firmware/out/badge-$(FW).uf2
@@ -40,6 +40,18 @@ deploy: build
 	cd build && $(MP) fs cp -r . :
 	$(MP) fs ls :
 	$(MP) reset
+
+# Instala el código sin borrar /data (ranking y contador de partidas): los .mpy
+# subidos tapan a los módulos congelados igual que con deploy.
+push: build
+	$(MP) run tools/wipe_code.py
+	cd build && $(MP) fs cp -r . :
+	$(MP) fs ls :
+	$(MP) reset
+
+# Ranking y contador de partidas guardados en el badge; tolera que falten.
+stats:
+	$(MP) exec "$$(printf 'import json\ntry:\n    print("top 5", open("data/leaderboard.json").read())\nexcept OSError:\n    print("top 5: (sin datos)")\ntry:\n    print("partidas", open("data/stats.json").read())\nexcept OSError:\n    print("partidas: (sin datos)")\n')"
 
 font:
 	uv run python tools/build_font.py

@@ -32,6 +32,8 @@ cp device/assets/contact.example.json device/assets/contact.json   # your vCard 
 make test       # pytest over the pure logic
 make preview    # render every screen to sim/out/*.png with a fake badger2040
 make deploy     # WIPES the badge, then installs the app precompiled to .mpy
+make push       # like deploy, but keeps /data (quiz leaderboard and game count)
+make stats      # prints the leaderboard and game count stored on the badge
 ```
 
 ### Custom firmware (optional)
