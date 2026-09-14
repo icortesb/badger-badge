@@ -44,9 +44,9 @@ make firmware   # podman: builds Pimoroni badger2040 v0.0.5 with the app frozen 
 make flash      # installs firmware/out/badge-full.uf2; enters BOOTSEL on its own if the badge is connected, otherwise hold BOOT/USR while plugging in USB
 ```
 
-On USB only, if the badge doesn't come back after `make deploy` or `make flash`, unplug and replug it.
+`make deploy` and `make push` restart the app over serial (no hardware reset), so the replug note is mainly about `make flash`: its UF2 install does power-cycle the board, and on USB only, if it doesn't come back, unplug and replug it.
 
-`badge-full.uf2` also contains `main.py` and `assets/` (including your `contact.json`), so keep it local. Flashing it replaces the whole badge filesystem, including the quiz leaderboard. `make flash FW=firmware` installs only the firmware and keeps whatever is already on the badge — but a `main.py` or any `.mpy` left there by `make deploy` shadow the frozen modules, so use `make flash` (full, the default) to go back to the frozen build. Files uploaded with `make deploy` take priority over the frozen modules, so you can iterate without reflashing. On the author's badge, loading the app's modules on each wake went from 123 ms (.mpy on the filesystem) to 21 ms (frozen).
+`badge-full.uf2` also contains `main.py` and `assets/` (including your `contact.json`), so keep it local. Flashing it replaces the whole badge filesystem, including the quiz leaderboard. `make flash FW=firmware` installs only the firmware and keeps whatever is already on the badge — but a `main.py` or any `.mpy` left there by `make deploy` or `make push` shadow the frozen modules, so use `make flash` (full, the default) to go back to the frozen build. Files uploaded with `make deploy` or `make push` take priority over the frozen modules, so you can iterate without reflashing. On the author's badge, loading the app's modules on each wake went from 123 ms (.mpy on the filesystem) to 21 ms (frozen).
 
 `make deploy` erases everything on the badge, including the quiz leaderboard. Back up the factory files first if you want them (`mpremote fs cp -r :. backup/`).
 

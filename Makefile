@@ -53,8 +53,10 @@ push: build
 	$(RESTART)
 
 # Ranking y contador de partidas guardados en el badge; tolera que falten.
+# El exec interrumpe main.py en el badge, así que hay que reiniciarlo después.
 stats:
-	$(MP) exec "$$(printf 'import json\ntry:\n    print("top 5", open("data/leaderboard.json").read())\nexcept OSError:\n    print("top 5: (sin datos)")\ntry:\n    print("partidas", open("data/stats.json").read())\nexcept OSError:\n    print("partidas: (sin datos)")\n')"
+	$(MP) exec "$$(printf 'try:\n    print("top 5", open("data/leaderboard.json").read())\nexcept OSError:\n    print("top 5: (sin datos)")\ntry:\n    print("partidas", open("data/stats.json").read())\nexcept OSError:\n    print("partidas: (sin datos)")\n')"
+	$(RESTART)
 
 # Reinicia la app sin tocar la placa (útil en la conferencia, sin re-enchufar).
 restart:
@@ -66,11 +68,12 @@ font:
 # Flashea un .uf2 en modo BOOTSEL. make flash (completo) | make flash FW=firmware | make flash UF2=ruta.uf2
 # Si el badge ya está conectado y corriendo (existe $(PORT)), entra solo en
 # BOOTSEL (machine.bootloader(), que corta la conexión serial: se ignora ese
-# error) sin necesidad de mantener BOOT/USR; si no, tools/flash.sh pide
-# mantenerlo al enchufar el USB.
+# error) sin necesidad de mantener BOOT/USR (se lo avisa a tools/flash.sh con
+# AUTO_BOOTSEL=1); si no, tools/flash.sh pide mantenerlo al enchufar el USB.
 flash:
-	if [ -e $(PORT) ]; then $(MP) exec "import machine; machine.bootloader()" || true; fi
-	sh tools/flash.sh "$(UF2)"
+	auto=0; \
+	if [ -e $(PORT) ]; then $(MP) exec "import machine; machine.bootloader()" || true; auto=1; fi; \
+	AUTO_BOOTSEL=$$auto sh tools/flash.sh "$(UF2)"
 
 # Firmware propio (Pimoroni badger2040 v0.0.5 + app congelada) en podman.
 firmware: test qr

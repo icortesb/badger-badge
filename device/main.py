@@ -1,3 +1,4 @@
+import gc
 import time
 
 import machine
@@ -37,7 +38,7 @@ link_items = links.items(state.load(CONTACT_PATH, links.CONTACT_DEFAULTS))
 app = state.load(APP_PATH, nav.DEFAULTS)
 queue = buttons.install()
 policy = screen.Policy()
-policy.partials = app["partials"]
+policy.partials = nav._int(app["partials"])
 if woken:
     buttons.add_wake_buttons(queue)
 
@@ -122,8 +123,9 @@ def main(cold):
     if cold:
         app["tab"] = "badge"
         app["combo"] = 0
-        state.save(APP_PATH, app)
         render("tab")
+        app["partials"] = policy.partials
+        state.save(APP_PATH, app)
     while True:
         d.keepalive()
         now = time.ticks_ms()
@@ -138,17 +140,17 @@ def main(cold):
                 import quiz_screen
                 quiz_screen.run(d, jpeg, random, queue)
                 app["tab"] = "badge"
+                render("tab")
                 app["partials"] = policy.partials
                 state.save(APP_PATH, app)
-                render("tab")
             else:
-                app["partials"] = policy.partials
-                if app != before_app:
-                    state.save(APP_PATH, app)
                 if app["tab"] != before[0]:
                     render("tab")
                 elif (app["link"], app["project"]) != before[1:]:
                     render("content")
+                app["partials"] = policy.partials
+                if app != before_app:
+                    state.save(APP_PATH, app)
             cursor_on = True
             now = time.ticks_ms()
             awake_until = time.ticks_add(now, BATTERY_AWAKE_MS)
@@ -207,9 +209,13 @@ else:
         try:
             main(cold)
         except Exception as exc:
-            error_screen(exc)
             try:
-                state.save(APP_PATH, dict(nav.DEFAULTS, tab="badge"))
+                gc.collect()
+                error_screen(exc)
+            except Exception:
+                pass
+            try:
+                state.save(APP_PATH, dict(nav.DEFAULTS, tab="error"))
             except Exception:
                 pass
             queue.clear()
@@ -223,5 +229,5 @@ else:
             wait_release()
             queue.clear()
             app = state.load(APP_PATH, nav.DEFAULTS)
-            policy.partials = app["partials"]
+            policy.partials = nav._int(app["partials"])
             cold = True

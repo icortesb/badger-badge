@@ -1,15 +1,19 @@
 #!/bin/sh
 # Copia un .uf2 al badge en modo BOOTSEL. Si el badge está conectado y
 # corriendo, el target `flash` del Makefile ya lo mandó solo a BOOTSEL antes
-# de llamar a este script (machine.bootloader() por serial); si no, hay que
-# mantener BOOT/USR al enchufar el USB.
+# de llamar a este script (machine.bootloader() por serial, avisado acá con
+# AUTO_BOOTSEL=1); si no, hay que mantener BOOT/USR al enchufar el USB.
 set -eu
 
 uf2="$1"
 [ -f "$uf2" ] || { echo "No existe $uf2" >&2; exit 1; }
 
 dev=/dev/disk/by-label/RPI-RP2
-echo "Mantené BOOT/USR en el badge y enchufá el USB (espero 60 s)..."
+if [ "${AUTO_BOOTSEL:-0}" = "1" ]; then
+    echo "Esperando la unidad RPI-RP2..."
+else
+    echo "Mantené BOOT/USR en el badge y enchufá el USB (espero 60 s)..."
+fi
 i=0
 while [ ! -e "$dev" ]; do
     i=$((i + 1))

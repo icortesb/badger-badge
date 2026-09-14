@@ -9,11 +9,15 @@ import time
 import serial
 
 PORT = sys.argv[1] if len(sys.argv) > 1 else "/dev/ttyACM0"
-TIMEOUT_S = 2.0
+TIMEOUT_S = 5.0
 
 
 def main():
-    s = serial.Serial(PORT, 115200, timeout=0.2)
+    try:
+        s = serial.Serial(PORT, 115200, timeout=0.2)
+    except serial.SerialException as exc:
+        print("No se pudo abrir {}: {}".format(PORT, exc))
+        sys.exit(1)
     buf = b""
     found = False
     try:
