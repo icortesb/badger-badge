@@ -7,7 +7,7 @@ A terminal-styled conference badge for the [Pimoroni Badger 2040](https://shop.p
 - **proyectos** — short project blurbs with a QR to each repo.
 - **hidden quiz** — press `▲ ▲ ▼ ▼ A B` for 10 questions mixing programming-language logos and dev trivia, with a score title and a top-5 leaderboard with initials.
 
-Runs on battery: the badge stays awake for about 10 seconds after the last button press, with a blinking cursor, then powers off, keeping the image on the e-ink display, and wakes on any button. On USB it stays powered on; the cursor keeps blinking and stops after a minute of no input.
+After each button press the cursor blinks twice and settles solid; if that left partial refreshes on screen, the badge does one full clean refresh to clear the ghosting. Runs on battery: once settled, it powers off, keeping the image on the e-ink display, and wakes on any button. On USB it stays powered on.
 
 ## Controls
 

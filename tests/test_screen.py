@@ -63,6 +63,49 @@ def test_unknown_kind_raises():
     raise AssertionError("expected ValueError")
 
 
+def test_tab_resets_dirty():
+    p = screen.Policy()
+    p.plan("content", screen.CONTENT)
+    p.plan("detail", (112, 104, 12, 16))
+    assert p.dirty > 0
+    p.plan("tab")
+    assert p.dirty == 0
+
+
+def test_content_partial_increments_dirty():
+    p = screen.Policy()
+    assert p.dirty == 0
+    p.plan("content", screen.CONTENT)
+    assert p.dirty == 1
+    p.plan("content", screen.CONTENT)
+    assert p.dirty == 2
+
+
+def test_content_cleanup_resets_dirty():
+    p = screen.Policy()
+    for _ in range(screen.CLEANUP_EVERY - 1):
+        p.plan("content", screen.CONTENT)
+    assert p.dirty == screen.CLEANUP_EVERY - 1
+    assert p.plan("content", screen.CONTENT) == (screen.FULL, screen.FAST, None)
+    assert p.dirty == 0
+
+
+def test_detail_increments_dirty_but_not_partials():
+    p = screen.Policy()
+    p.plan("detail", (112, 104, 12, 16))
+    assert p.dirty == 1
+    assert p.partials == 0
+
+
+def test_plan_clean_returns_full_normal_and_resets():
+    p = screen.Policy()
+    p.plan("content", screen.CONTENT)
+    p.plan("detail", (112, 104, 12, 16))
+    assert p.plan("clean") == (screen.FULL, screen.NORMAL, None)
+    assert p.partials == 0
+    assert p.dirty == 0
+
+
 def test_project_regions_fit_left_of_qr_and_on_screen():
     # Las regiones de partial_update se expanden a bloques de 8px (screen.align):
     # una línea y el QR no deben terminar compartiendo el mismo bloque alineado,

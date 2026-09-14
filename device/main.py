@@ -20,9 +20,9 @@ import ui
 
 APP_PATH = "data/app.json"
 CONTACT_PATH = "assets/contact.json"
-BLINK_MS = 600
-BATTERY_AWAKE_MS = 10000
-USB_BLINK_MS = 60000
+BLINK_MS = 1200
+BLINKS = 2
+IDLE_CLEAN_MS = 3000
 
 woken = badger2040.woken_by_button()
 d = badger2040.Badger2040()
@@ -43,8 +43,7 @@ if woken:
     buttons.add_wake_buttons(queue)
 
 vbus_pin = machine.Pin(24, machine.Pin.IN)
-# En un wake a batería (reboot) el framebuffer arranca en cero (negro) y sin fuente
-# bitmap8 seteada: draw_cursor no puede parpetear sobre eso sin pintar la pestaña primero.
+# Ver ensure_framebuffer(): en un wake a batería (reboot) arranca en False.
 framebuffer_ready = False
 
 
@@ -56,15 +55,23 @@ def current_project():
     return projects.PROJECTS[app["project"] % len(projects.PROJECTS)]
 
 
-def draw_cursor(visible):
+def ensure_framebuffer():
+    # En un wake a batería (reboot) el framebuffer arranca en cero (negro) y sin
+    # fuente bitmap8 seteada: draw_cursor y la limpieza no pueden operar sobre
+    # eso sin pintar la pestaña primero. Sólo dibuja una vez por wake.
     global framebuffer_ready
-    if not framebuffer_ready:
-        ui.battery_volts = None if on_usb() else battery.read_volts()
-        if app["tab"] == "badge":
-            badge_screen.draw(d, jpeg)
-        elif app["tab"] == "projects":
-            projects_screen.draw(d, current_project())
-        framebuffer_ready = True
+    if framebuffer_ready:
+        return
+    ui.battery_volts = None if on_usb() else battery.read_volts()
+    if app["tab"] == "badge":
+        badge_screen.draw(d, jpeg)
+    elif app["tab"] == "projects":
+        projects_screen.draw(d, current_project())
+    framebuffer_ready = True
+
+
+def draw_cursor(visible):
+    ensure_framebuffer()
     if app["tab"] == "badge":
         return badge_screen.cursor(d, visible)
     if app["tab"] == "projects":
@@ -115,17 +122,17 @@ def wait_release():
 
 def main(cold):
     global app
-    cursor_on = True
-    now = time.ticks_ms()
-    awake_until = time.ticks_add(now, BATTERY_AWAKE_MS)
-    blink_until = time.ticks_add(now, USB_BLINK_MS)
-    next_blink = time.ticks_add(now, BLINK_MS)
     if cold:
         app["tab"] = "badge"
         app["combo"] = 0
         render("tab")
         app["partials"] = policy.partials
         state.save(APP_PATH, app)
+    now = time.ticks_ms()
+    cursor_on = True
+    toggles_left = BLINKS * 2
+    next_blink = time.ticks_add(now, BLINK_MS)
+    last_event_ms = now
     while True:
         d.keepalive()
         now = time.ticks_ms()
@@ -151,42 +158,52 @@ def main(cold):
                 app["partials"] = policy.partials
                 if app != before_app:
                     state.save(APP_PATH, app)
-            cursor_on = True
             now = time.ticks_ms()
-            awake_until = time.ticks_add(now, BATTERY_AWAKE_MS)
-            blink_until = time.ticks_add(now, USB_BLINK_MS)
+            cursor_on = True
+            toggles_left = BLINKS * 2
             next_blink = time.ticks_add(now, BLINK_MS)
+            last_event_ms = now
             continue
         if queue.pending():
             time.sleep_ms(10)
             continue
-        usb = on_usb()
-        # En USB nunca se apaga: sólo importa si todavía estamos dentro de la
-        # ventana de parpadeo (se reinicia con cada evento). En batería, la
-        # ventana de "despierto" antes de halt() se mantiene igual que antes.
-        if usb:
-            blinking = time.ticks_diff(blink_until, now) > 0
-        else:
-            blinking = time.ticks_diff(awake_until, now) > 0
-        if blinking and time.ticks_diff(now, next_blink) >= 0:
+        # Cursor: titila BLINKS veces (cada titileo son 2 cambios de estado)
+        # y queda fijo visible. Después de un rato quieto, si hubo refrescos
+        # parciales, una limpieza NORMAL completa saca el fantasma acumulado.
+        if toggles_left > 0 and time.ticks_diff(now, next_blink) >= 0:
             region = draw_cursor(not cursor_on)
             if region is not None:
                 cursor_on = not cursor_on
                 screen.show(d, policy, "detail", region)
+                toggles_left -= 1
+            else:
+                # Pestaña sin cursor (links): nada que titilar.
+                toggles_left = 0
             next_blink = time.ticks_add(time.ticks_ms(), BLINK_MS)
-        if not blinking and not cursor_on:
-            # Se acabó la ventana de parpadeo (USB) o el rato despierto (batería):
-            # dejar el cursor sólido una sola vez y no seguir titilando.
+        if toggles_left == 0 and not cursor_on:
+            # No debería pasar (el titileo siempre termina visible), pero por
+            # las dudas: dejar el cursor sólido en vez de apagado.
             region = draw_cursor(True)
             if region is not None:
                 screen.show(d, policy, "detail", region)
             cursor_on = True
-        if not usb and not blinking:
+        if (
+            toggles_left == 0
+            and time.ticks_diff(now, last_event_ms) >= IDLE_CLEAN_MS
+            and policy.dirty > 0
+        ):
+            ensure_framebuffer()
+            screen.show(d, policy, "clean")
+            if app["partials"] != policy.partials:
+                app["partials"] = policy.partials
+                state.save(APP_PATH, app)
+        if not on_usb() and toggles_left == 0 and policy.dirty == 0:
             if queue.pending():
                 continue
             d.halt()
-            # Si seguimos vivos (botón apretado), seguir atendiendo.
-            awake_until = time.ticks_add(time.ticks_ms(), BATTERY_AWAKE_MS)
+            # Si seguimos vivos (botón apretado), el próximo pop() de la cola
+            # entra por la rama de arriba y reinicia el titileo; si no, la
+            # cola sigue vacía y este bloque vuelve a llamar a halt().
         time.sleep_ms(10)
 
 

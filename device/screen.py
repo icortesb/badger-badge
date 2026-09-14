@@ -7,6 +7,7 @@ FULL = "full"
 PARTIAL = "partial"
 FAST = "fast"
 TURBO = "turbo"
+NORMAL = "normal"
 
 
 def align(x, y, w, h):
@@ -21,23 +22,37 @@ def align(x, y, w, h):
 class Policy:
     def __init__(self):
         self.partials = 0
+        # Refrescos parciales (content o detail) desde el último refresco
+        # completo de cualquier tipo: cuenta cuánto fantasma puede haber
+        # acumulado la pantalla, para saber si vale la pena una limpieza NORMAL.
+        self.dirty = 0
 
     def plan(self, kind, region=None, speed=None):
         if kind == "tab":
             self.partials = 0
+            self.dirty = 0
             return FULL, FAST, None
         if kind == "content":
             self.partials += 1
             if self.partials >= CLEANUP_EVERY:
                 self.partials = 0
+                self.dirty = 0
                 return FULL, FAST, None
+            self.dirty += 1
             return PARTIAL, speed or TURBO, align(*region)
         if kind == "detail":
             # Los detalles (cursor, líneas tipeadas, QR) no cuentan para el cleanup
             # periódico: son parches chicos, no el motivo de que el e-ink se ensucie.
             # `speed` deja pisar el TURBO por defecto: un parche denso (el QR)
             # no termina de asentar los píxeles con TURBO y queda gris/lavado.
+            # Sí suman a `dirty`: son parciales igual, y también ensucian la
+            # pantalla de a poco (el cursor titilando, sobre todo).
+            self.dirty += 1
             return PARTIAL, speed or TURBO, align(*region)
+        if kind == "clean":
+            self.partials = 0
+            self.dirty = 0
+            return FULL, NORMAL, None
         raise ValueError(kind)
 
 
@@ -45,7 +60,13 @@ def show(d, policy, kind, region=None, speed=None):
     import badger2040
 
     mode, chosen_speed, area = policy.plan(kind, region, speed)
-    d.set_update_speed(badger2040.UPDATE_FAST if chosen_speed == FAST else badger2040.UPDATE_TURBO)
+    if chosen_speed == FAST:
+        update_speed = badger2040.UPDATE_FAST
+    elif chosen_speed == NORMAL:
+        update_speed = badger2040.UPDATE_NORMAL
+    else:
+        update_speed = badger2040.UPDATE_TURBO
+    d.set_update_speed(update_speed)
     if mode == FULL:
         d.display.update()
     else:
