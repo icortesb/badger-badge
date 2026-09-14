@@ -4,11 +4,33 @@ import pixfont
 class Canvas:
     def __init__(self):
         self.on = set()
+        self.calls = 0
 
     def rectangle(self, x, y, w, h):
+        self.calls += 1
         for px in range(x, x + w):
             for py in range(y, y + h):
                 self.on.add((px, py))
+
+
+def _old_text(d, text, x, y, num=3, den=2):
+    """Algoritmo anterior (un rectángulo por bit encendido), usado como
+    referencia para verificar que el nuevo dibuja los mismos píxeles."""
+    cx = 0
+    for ch in text:
+        code = ord(ch)
+        if not 32 <= code <= 126:
+            continue
+        index = code - 32
+        base = index * pixfont.MAX_WIDTH
+        for col in range(pixfont.WIDTHS[index]):
+            x0, x1 = pixfont._span(cx + col, num, den)
+            bits = pixfont.DATA[base + col]
+            for row in range(8):
+                if bits & (1 << row):
+                    y0, y1 = pixfont._span(row, num, den)
+                    d.rectangle(x + x0, y + y0, x1 - x0, y1 - y0)
+        cx += pixfont.WIDTHS[index] + 1
 
 
 def test_widths_and_data_sizes():
@@ -61,6 +83,34 @@ def test_measure_full_stack_dev():
 
 def test_non_ascii_skipped():
     assert pixfont.measure("á", 3, 2) == 0
+
+
+def test_full_stack_dev_pixels_match_old_algorithm():
+    text = "Full-stack dev"
+    new = Canvas()
+    pixfont.text(new, text, 0, 0)
+    old = Canvas()
+    _old_text(old, text, 0, 0)
+    assert new.on == old.on
+
+
+def test_all_printable_chars_pixels_match_old_algorithm():
+    for code in range(32, 127):
+        ch = chr(code)
+        new = Canvas()
+        pixfont.text(new, ch, 0, 0, 3, 2)
+        old = Canvas()
+        _old_text(old, ch, 0, 0, 3, 2)
+        assert new.on == old.on, ch
+
+
+def test_full_stack_dev_uses_fewer_rectangle_calls_than_old_algorithm():
+    text = "Full-stack dev"
+    new = Canvas()
+    pixfont.text(new, text, 0, 0)
+    old = Canvas()
+    _old_text(old, text, 0, 0)
+    assert new.calls < old.calls
 
 
 def test_all_chars_draw_nonzero_rectangles_at_3_2():

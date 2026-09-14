@@ -51,10 +51,17 @@ def text(d, text, x, y, num=3, den=2):
         for col in range(WIDTHS[index]):
             x0, x1 = _span(cx + col, num, den)
             bits = DATA[base + col]
-            for row in range(8):
+            row = 0
+            while row < 8:
                 if bits & (1 << row):
-                    y0, y1 = _span(row, num, den)
+                    r0 = row
+                    while row < 8 and bits & (1 << row):
+                        row += 1
+                    y0 = _span(r0, num, den)[0]
+                    y1 = _span(row - 1, num, den)[1]
                     d.rectangle(x + x0, y + y0, x1 - x0, y1 - y0)
+                else:
+                    row += 1
         cx += WIDTHS[index] + 1
 '''
 
