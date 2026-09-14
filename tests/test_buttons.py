@@ -21,8 +21,8 @@ def test_events_come_out_in_order():
 def test_same_button_is_debounced():
     q = buttons.ButtonQueue()
     q.push("a", 0)
-    q.push("a", 100)
-    q.push("a", 300)
+    q.push("a", 30)
+    q.push("a", 90)
     assert drain(q, 1000) == ["a", "a"]
 
 
@@ -33,20 +33,89 @@ def test_debounce_is_per_button():
     assert drain(q, 1000) == ["a", "b"]
 
 
-def test_debounce_window_extends_with_each_bounce():
-    q = buttons.ButtonQueue()
-    q.push("a", 0)
-    q.push("a", 100)
-    q.push("a", 200)
-    q.push("a", 300)
-    assert drain(q, 1000) == ["a"]
+def test_accept_edge_rejects_when_not_pressed():
+    assert buttons.accept_edge(0, 1000, False) is False
 
 
-def test_debounce_window_does_not_extend_past_the_gap():
+def test_accept_edge_rejects_within_debounce_window():
+    assert buttons.accept_edge(0, buttons.DEBOUNCE_MS - 1, True) is False
+
+
+def test_accept_edge_accepts_at_debounce_window():
+    assert buttons.accept_edge(0, buttons.DEBOUNCE_MS, True) is True
+
+
+def test_push_raw_skips_debounce():
     q = buttons.ButtonQueue()
-    q.push("a", 0)
-    q.push("a", 200)
-    assert drain(q, 1000) == ["a", "a"]
+    q.push_raw("a", 0)
+    q.push_raw("a", 1)
+    q.push_raw("a", 2)
+    assert drain(q, 1000) == ["a", "a", "a"]
+
+
+def test_drain_moves_ring_events_into_queue_in_order():
+    buttons._ring_idx[0] = buttons.NAMES.index("up")
+    buttons._ring_ms[0] = 111
+    buttons._ring_idx[1] = buttons.NAMES.index("down")
+    buttons._ring_ms[1] = 222
+    buttons._pos[0] = 2
+    buttons._pos[1] = 0
+    try:
+        q = buttons.ButtonQueue()
+        buttons.drain(q)
+        assert drain(q, 1000) == ["up", "down"]
+        assert buttons._pos[1] == 2
+    finally:
+        buttons._pos[0] = 0
+        buttons._pos[1] = 0
+
+
+def test_drain_wraps_around_the_ring():
+    last = buttons.RING - 1
+    buttons._ring_idx[last] = buttons.NAMES.index("a")
+    buttons._ring_ms[last] = 5
+    buttons._ring_idx[0] = buttons.NAMES.index("b")
+    buttons._ring_ms[0] = 6
+    buttons._pos[0] = 1
+    buttons._pos[1] = last
+    try:
+        q = buttons.ButtonQueue()
+        buttons.drain(q)
+        assert drain(q, 1000) == ["a", "b"]
+        assert buttons._pos[1] == 1
+    finally:
+        buttons._pos[0] = 0
+        buttons._pos[1] = 0
+
+
+def test_drain_stops_at_a_full_ring_without_overwriting_unread_slots():
+    # head siempre queda un paso atrás de tail (un slot sacrificado) para
+    # poder distinguir "lleno" de "vacío" sin un contador aparte.
+    buttons._pos[0] = 5
+    buttons._pos[1] = 6
+    for i in range(buttons.RING):
+        buttons._ring_idx[i] = buttons.NAMES.index("a")
+        buttons._ring_ms[i] = i
+    try:
+        q = buttons.ButtonQueue()
+        buttons.drain(q)
+        assert len(drain(q, 1000)) == buttons.RING - 1
+        assert buttons._pos[1] == buttons._pos[0]
+    finally:
+        buttons._pos[0] = 0
+        buttons._pos[1] = 0
+
+
+def test_source_hook_is_pulled_before_pending_and_pop():
+    calls = []
+
+    def source():
+        calls.append(1)
+
+    q = buttons.ButtonQueue(source=source)
+    assert q.pending() is False
+    assert q.pop(0) is None
+    assert calls == [1, 1]
 
 
 def test_chord_off_by_default_pops_up_and_down_immediately():
