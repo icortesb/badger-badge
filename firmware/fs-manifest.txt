@@ -2,3 +2,4 @@ main.py
 assets/*.jpg
 assets/*.json
 assets/logos/*.jpg
+assets/qr/*.bin

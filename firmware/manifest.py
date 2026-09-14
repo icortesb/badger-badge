@@ -14,6 +14,7 @@ freeze(
         "pixfont.py",
         "projects.py",
         "projects_screen.py",
+        "qrcache.py",
         "quiz_engine.py",
         "quiz_screen.py",
         "screen.py",

@@ -1,5 +1,6 @@
 import battery
 import jpegdec
+import qrcache
 import qrcode
 
 WIDTH = 296
@@ -65,7 +66,33 @@ def window(d, x, y, w, h, title):
     d.set_font("bitmap8")
 
 
+def _read_qr(payload):
+    try:
+        with open(qrcache.path(payload), "rb") as f:
+            return f.read()
+    except OSError:
+        return None
+
+
 def qr(d, payload, x, y, box):
+    data = _read_qr(payload)
+    if data is None:
+        return _qr_live(d, payload, x, y, box)
+    size, rows = qrcache.decode(data)
+    module = max(1, box // size)
+    ox = x + (box - module * size) // 2
+    oy = y + (box - module * size) // 2
+    d.set_pen(WHITE)
+    d.rectangle(x, y, box, box)
+    d.set_pen(BLACK)
+    for r, runs in enumerate(rows):
+        yy = oy + r * module
+        for start, length in runs:
+            d.rectangle(ox + start * module, yy, length * module, module)
+    return module
+
+
+def _qr_live(d, payload, x, y, box):
     code = qrcode.QRCode()
     code.set_text(payload)
     w, h = code.get_size()

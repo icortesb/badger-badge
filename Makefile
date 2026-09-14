@@ -4,7 +4,7 @@ MP = mpremote connect $(PORT)
 # Misma versión que el firmware del badge (MicroPython 1.23, mpy v6.3).
 MPY_CROSS = uv tool run --from mpy-cross==1.23.0 mpy-cross
 
-.PHONY: test assets preview build deploy font flash firmware
+.PHONY: test assets preview build deploy font flash firmware qr
 
 FW ?= full
 UF2 ?= firmware/out/badge-$(FW).uf2
@@ -15,12 +15,15 @@ test:
 assets:
 	uv run --with pillow python tools/build_assets.py --photo $(PHOTO)
 
+qr:
+	uv run --with segno python tools/build_qr.py
+
 preview:
 	PYTHONDONTWRITEBYTECODE=1 uv run --with pillow --with segno python sim/preview.py
 
 # Si el badge no responde: enchufar el USB manteniendo A+C (modo dev) y correr make deploy.
 # Precompila todo menos main.py a .mpy: el badge no compila fuentes en cada wake a batería.
-build: test
+build: test qr
 	test -f device/assets/contact.json
 	rm -rf build
 	mkdir -p build
@@ -46,7 +49,7 @@ flash:
 	sh tools/flash.sh "$(UF2)"
 
 # Firmware propio (Pimoroni badger2040 v0.0.5 + app congelada) en podman.
-firmware: test
+firmware: test qr
 	test -f device/assets/contact.json
 	find device -name __pycache__ -type d -exec rm -rf {} +
 	podman build -t badger-badge-fw firmware

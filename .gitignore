@@ -1,4 +1,5 @@
 device/assets/contact.json
+device/assets/qr/
 __pycache__/
 .pytest_cache/
 sim/out/
