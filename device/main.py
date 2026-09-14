@@ -22,7 +22,6 @@ APP_PATH = "data/app.json"
 CONTACT_PATH = "assets/contact.json"
 BLINK_MS = 1200
 BLINKS = 2
-IDLE_CLEAN_MS = 3000
 
 woken = badger2040.woken_by_button()
 d = badger2040.Badger2040()
@@ -57,7 +56,7 @@ def current_project():
 
 def ensure_framebuffer():
     # En un wake a batería (reboot) el framebuffer arranca en cero (negro) y sin
-    # fuente bitmap8 seteada: draw_cursor y la limpieza no pueden operar sobre
+    # fuente bitmap8 seteada: draw_cursor no puede operar sobre
     # eso sin pintar la pestaña primero. Sólo dibuja una vez por wake.
     global framebuffer_ready
     if framebuffer_ready:
@@ -132,7 +131,6 @@ def main(cold):
     cursor_on = True
     toggles_left = BLINKS * 2
     next_blink = time.ticks_add(now, BLINK_MS)
-    last_event_ms = now
     while True:
         d.keepalive()
         now = time.ticks_ms()
@@ -162,14 +160,14 @@ def main(cold):
             cursor_on = True
             toggles_left = BLINKS * 2
             next_blink = time.ticks_add(now, BLINK_MS)
-            last_event_ms = now
             continue
         if queue.pending():
             time.sleep_ms(10)
             continue
         # Cursor: titila BLINKS veces (cada titileo son 2 cambios de estado)
-        # y queda fijo visible. Después de un rato quieto, si hubo refrescos
-        # parciales, una limpieza NORMAL completa saca el fantasma acumulado.
+        # y queda fijo visible. Sin limpieza por timer: el fantasma se limpia
+        # con el refresco completo de cada cambio de pestaña y cada 8 cambios
+        # de contenido, así no se suman refrescos (ni tiempo despierto) extra.
         if toggles_left > 0 and time.ticks_diff(now, next_blink) >= 0:
             region = draw_cursor(not cursor_on)
             if region is not None:
@@ -187,17 +185,7 @@ def main(cold):
             if region is not None:
                 screen.show(d, policy, "detail", region)
             cursor_on = True
-        if (
-            toggles_left == 0
-            and time.ticks_diff(now, last_event_ms) >= IDLE_CLEAN_MS
-            and policy.dirty > 0
-        ):
-            ensure_framebuffer()
-            screen.show(d, policy, "clean")
-            if app["partials"] != policy.partials:
-                app["partials"] = policy.partials
-                state.save(APP_PATH, app)
-        if not on_usb() and toggles_left == 0 and policy.dirty == 0:
+        if not on_usb() and toggles_left == 0:
             if queue.pending():
                 continue
             d.halt()
