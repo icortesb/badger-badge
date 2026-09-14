@@ -1,5 +1,8 @@
 #!/bin/sh
-# Copia un .uf2 al badge en modo BOOTSEL (mantener BOOT/USR al enchufar el USB).
+# Copia un .uf2 al badge en modo BOOTSEL. Si el badge está conectado y
+# corriendo, el target `flash` del Makefile ya lo mandó solo a BOOTSEL antes
+# de llamar a este script (machine.bootloader() por serial); si no, hay que
+# mantener BOOT/USR al enchufar el USB.
 set -eu
 
 uf2="$1"

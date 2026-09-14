@@ -34,13 +34,14 @@ make preview    # render every screen to sim/out/*.png with a fake badger2040
 make deploy     # WIPES the badge, then installs the app precompiled to .mpy
 make push       # like deploy, but keeps /data (quiz leaderboard and game count)
 make stats      # prints the leaderboard and game count stored on the badge
+make restart    # restarts the app over serial, no reset and no re-plugging
 ```
 
 ### Custom firmware (optional)
 
 ```sh
 make firmware   # podman: builds Pimoroni badger2040 v0.0.5 with the app frozen in
-make flash      # hold BOOT/USR while plugging in USB; installs firmware/out/badge-full.uf2
+make flash      # installs firmware/out/badge-full.uf2; enters BOOTSEL on its own if the badge is connected, otherwise hold BOOT/USR while plugging in USB
 ```
 
 On USB only, if the badge doesn't come back after `make deploy` or `make flash`, unplug and replug it.
